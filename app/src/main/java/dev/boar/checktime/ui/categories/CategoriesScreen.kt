@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -35,6 +34,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -123,21 +123,23 @@ fun CategoriesRoute(viewModel: CategoriesViewModel, onBack: () -> Unit) {
             is Editing.NewCategory -> Triple(stringResource(R.string.categories_add_category), "", Palette.colors[0])
             is Editing.EditCategory -> Triple(stringResource(R.string.categories_edit_category), e.category.name, e.category.color)
         }
-        NameColorDialog(
-            title = title,
-            initialName = name,
-            initialColor = color,
-            onDismiss = { editing = null },
-            onConfirm = { newName, newColor ->
-                when (e) {
-                    Editing.NewGroup -> viewModel.addGroup(newName, newColor)
-                    is Editing.EditGroup -> viewModel.editGroup(e.group, newName, newColor)
-                    is Editing.NewCategory -> viewModel.addCategory(e.groupId, newName, newColor)
-                    is Editing.EditCategory -> viewModel.editCategory(e.category, newName, newColor)
-                }
-                editing = null
-            },
-        )
+        key(e) {
+            NameColorDialog(
+                title = title,
+                initialName = name,
+                initialColor = color,
+                onDismiss = { editing = null },
+                onConfirm = { newName, newColor ->
+                    when (e) {
+                        Editing.NewGroup -> viewModel.addGroup(newName, newColor)
+                        is Editing.EditGroup -> viewModel.editGroup(e.group, newName, newColor)
+                        is Editing.NewCategory -> viewModel.addCategory(e.groupId, newName, newColor)
+                        is Editing.EditCategory -> viewModel.editCategory(e.category, newName, newColor)
+                    }
+                    editing = null
+                },
+            )
+        }
     }
 }
 
