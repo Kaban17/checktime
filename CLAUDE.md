@@ -15,11 +15,14 @@ Communicate with the user in Russian. UI strings are Russian, in `strings.xml`.
 
 ## Toolchain
 
-- Android SDK at `/opt/android-sdk` (platform 36, build-tools 35.0.1).
-- Build with JDK 21, not the system default JDK 26:
-  `export JAVA_HOME=/usr/lib/jvm/java-21-openjdk` (or set `org.gradle.java.home`
-  in `gradle.properties`).
-- Gradle 9.6 wrapper is already cached in `~/.gradle/wrapper/dists`.
+- Android SDK at `~/Android/Sdk` (platform 36 + 37.2, build-tools 36.0.0); `local.properties`
+  points there and is gitignored. `/opt/android-sdk` is root-owned — don't use it.
+- Build JDK is pinned to `/usr/lib/jvm/java-21-openjdk` via `org.gradle.java.home` in
+  `gradle.properties`; no need to export `JAVA_HOME`. The system default JDK 26 does not work.
+- Gradle 9.6.0 wrapper, AGP 9.4.0 with built-in Kotlin 2.2.21 (no `kotlin-android` plugin;
+  `org.jetbrains.kotlin.plugin.compose` and KSP are applied). `compileSdk 37.2` because
+  Compose BOM 2026.09 requires it; `targetSdk 36`.
+- Robolectric on JDK 21 needs the `--add-opens/--add-exports` jvmArgs already in `app/build.gradle.kts`.
 - Test device is a physical phone on Android 16 (`adb devices`); there is no emulator.
 
 ## Commands
@@ -32,7 +35,7 @@ Communicate with the user in Russian. UI strings are Russian, in `strings.xml`.
 ./gradlew :app:testDebugUnitTest --tests '*TimelineRepositoryTest.allocate*'   # single test
 ./gradlew :app:connectedDebugAndroidTest  # instrumented tests on the phone
 ./gradlew :app:lint
-adb shell am start -n dev.boar.checktime/.ui.allocation.AllocationActivity   # open the popup by hand
+adb shell monkey -p dev.boar.checktime -c android.intent.category.LAUNCHER 1   # launch the app
 ```
 
 ## Architecture
@@ -40,9 +43,9 @@ adb shell am start -n dev.boar.checktime/.ui.allocation.AllocationActivity   # o
 Single module `app`, package `dev.boar.checktime`. Manual DI via `AppContainer`
 in the `Application` class — no Hilt.
 
-- `data/` — Room entities/DAOs (`Group`, `Category`, `Segment`), `AppDatabase`,
-  `SettingsRepository` (DataStore: `trackingStart`, `accountedUntil`,
-  `intervalMinutes`, `snoozeMinutes`, `stepMinutes`).
+- `data/` — Room entities/DAOs (`Group`, `Category`, `Segment`, and a `tracking_state`
+  table holding `trackingStart`/`accountedUntil`), `AppDatabase`,
+  `SettingsRepository` (DataStore: only `intervalMinutes`, `snoozeMinutes`, `stepMinutes`).
 - `domain/` — `TimelineRepository` is the **only** code that writes segments or
   moves `accountedUntil`. It owns the invariants: segments never overlap and
   cover `[trackingStart, accountedUntil)` with no gaps. Operations (`allocate`,
@@ -57,10 +60,15 @@ in the `Application` class — no Hilt.
   relies on the user having granted "display over other apps"
   (`SYSTEM_ALERT_WINDOW`), which is what exempts background activity starts.
   `BootReceiver` re-arms the alarm.
-- `ui/` — Compose screens + ViewModels. Bottom nav: Day · Stats · Settings
+- `ui/` — Compose screens + ViewModels. Bottom nav: Day · Settings (Stats is stage 3)
   (settings includes the group/category editor and the permissions checklist).
   `AllocationActivity` is a separate `singleTask`, `showWhenLocked` activity,
   not part of the nav graph; back gesture = postpone.
+
+Testing note: Robolectric picks up `TestCheckTimeApp` (in `app/src/test`) as the
+`Application` class instead of the real one, which wires `MainActivity` to an
+in-memory Room DB — this is why JVM unit tests can drive `MainActivity` directly
+without touching a real database.
 
 Time semantics worth remembering:
 
