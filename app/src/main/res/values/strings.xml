@@ -42,4 +42,13 @@
     <string name="categories_delete_group_not_empty">Сначала удалите категории группы</string>
     <string name="dialog_save">Сохранить</string>
     <string name="dialog_cancel">Отмена</string>
+    <string name="day_today">Сегодня</string>
+    <string name="day_not_started">Учёт не начат — откройте «Настройки»</string>
+    <string name="day_clock_went_back">Часы устройства переведены назад: граница учёта в будущем</string>
+    <string name="day_tail">Не расписано: %1$s</string>
+    <string name="day_allocate">Распределить</string>
+    <string name="day_totals">Итого за день</string>
+    <string name="day_segments">Записи</string>
+    <string name="day_empty">За этот день записей нет</string>
+    <string name="day_unknown_category">Удалённая категория</string>
 </resources>
