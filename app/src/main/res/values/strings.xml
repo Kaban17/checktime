@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">CheckTime</string>
+    <string name="channel_alarm">Пора распределить время</string>
+    <string name="channel_tail">Нерасписанное время</string>
+    <string name="notification_title">Не расписано: %1$s</string>
+    <string name="notification_text">Нажмите, чтобы распределить</string>
 </resources>

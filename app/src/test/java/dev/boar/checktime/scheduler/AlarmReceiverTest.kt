@@ -1,0 +1,85 @@
+package dev.boar.checktime.scheduler
+
+import android.app.AlarmManager
+import android.app.Application
+import android.app.NotificationManager
+import androidx.test.core.app.ApplicationProvider
+import dev.boar.checktime.AppContainer
+import dev.boar.checktime.domain.TimeMath.MINUTE_MS
+import dev.boar.checktime.testContainer
+import kotlinx.coroutines.test.runTest
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadows.ShadowSettings
+
+@RunWith(RobolectricTestRunner::class)
+class AlarmReceiverTest {
+    private val context: Application = ApplicationProvider.getApplicationContext()
+    private val notifications = context.getSystemService(NotificationManager::class.java)
+    private val alarmManager = context.getSystemService(AlarmManager::class.java)
+    private var now = 0L
+    private lateinit var container: AppContainer
+
+    @Before fun setUp() {
+        container = testContainer(context) { now }
+        PendingNotification.createChannels(context)
+        ShadowSettings.setCanDrawOverlays(true)
+    }
+
+    @After fun tearDown() = container.db.close()
+
+    @Test fun beforeTrackingStartDoesNothing() = runTest {
+        AlarmReceiver.handle(context, container)
+        assertNull(shadowOf(notifications).getNotification(PendingNotification.ID))
+        assertNull(shadowOf(alarmManager).peekNextScheduledAlarm())
+        assertNull(shadowOf(context).nextStartedActivity)
+    }
+
+    @Test fun withTailShowsNotificationStartsActivityAndArmsSnooze() = runTest {
+        container.timeline.startTracking(now = 0)
+        now = 47 * MINUTE_MS
+        AlarmReceiver.handle(context, container)
+
+        assertNotNull(shadowOf(notifications).getNotification(PendingNotification.ID))
+        assertEquals(PendingNotification.ACTION_ALLOCATE, shadowOf(context).nextStartedActivity.action)
+        // snooze по умолчанию 10 мин (Settings())
+        assertEquals(now + 10 * MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
+    }
+
+    @Test fun withoutOverlayPermissionOnlyNotifies() = runTest {
+        ShadowSettings.setCanDrawOverlays(false)
+        container.timeline.startTracking(now = 0)
+        now = 5 * MINUTE_MS
+        AlarmReceiver.handle(context, container)
+        assertNotNull(shadowOf(notifications).getNotification(PendingNotification.ID))
+        assertNull(shadowOf(context).nextStartedActivity)
+    }
+
+    @Test fun withoutTailCancelsNotificationAndArmsNextInterval() = runTest {
+        container.timeline.startTracking(now = 0)
+        now = 30_000
+        PendingNotification.show(context, 5, urgent = false)
+        AlarmReceiver.handle(context, container)
+        assertNull(shadowOf(notifications).getNotification(PendingNotification.ID))
+        assertNull(shadowOf(context).nextStartedActivity)
+        // interval по умолчанию 30 мин, accountedUntil = 0
+        assertEquals(30 * MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
+    }
+
+    @Test fun tailNotifierSyncShowsAndHides() = runTest {
+        container.timeline.startTracking(now = 0)
+        now = 3 * MINUTE_MS
+        TailNotifier.sync(context, container)
+        assertNotNull(shadowOf(notifications).getNotification(PendingNotification.ID))
+        now = 30_000
+        TailNotifier.sync(context, container)
+        assertNull(shadowOf(notifications).getNotification(PendingNotification.ID))
+    }
+}
