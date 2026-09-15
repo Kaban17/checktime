@@ -30,4 +30,16 @@
     <string name="perm_full_screen">Полноэкранные уведомления</string>
     <string name="perm_battery">Без оптимизации батареи</string>
     <string name="perm_fix">Настроить</string>
+    <string name="categories_title">Категории</string>
+    <string name="categories_add_group">Новая группа</string>
+    <string name="categories_edit_group">Группа</string>
+    <string name="categories_add_category">Добавить категорию</string>
+    <string name="categories_edit_category">Категория</string>
+    <string name="categories_name">Название</string>
+    <string name="categories_archive">В архив</string>
+    <string name="categories_unarchive">Вернуть</string>
+    <string name="categories_delete_has_segments">У категории есть записи — её можно только архивировать</string>
+    <string name="categories_delete_group_not_empty">Сначала удалите категории группы</string>
+    <string name="dialog_save">Сохранить</string>
+    <string name="dialog_cancel">Отмена</string>
 </resources>
