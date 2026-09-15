@@ -28,13 +28,15 @@ class AppContainer(
     val alarms = AlarmScheduler(context)
 }
 
-class CheckTimeApp : Application() {
+open class CheckTimeApp : Application() {
     lateinit var container: AppContainer
         private set
 
+    protected open fun createContainer(): AppContainer = AppContainer(this)
+
     override fun onCreate() {
         super.onCreate()
-        container = AppContainer(this)
+        container = createContainer()
         PendingNotification.createChannels(this)
         container.applicationScope.launch { container.categories.seedDefaultsIfEmpty() }
     }

@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import android.util.Log
 import dev.boar.checktime.AppContainer
 import dev.boar.checktime.appContainer
 import dev.boar.checktime.domain.TimeMath
@@ -17,6 +18,8 @@ private fun BroadcastReceiver.handleAsync(context: Context) {
     container.applicationScope.launch {
         try {
             AlarmReceiver.handle(context, container)
+        } catch (e: Exception) {
+            Log.e("AlarmReceiver", "handle failed", e)
         } finally {
             pending.finish()
         }
