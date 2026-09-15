@@ -12,4 +12,22 @@
     <string name="allocation_postpone">Отложить</string>
     <string name="allocation_stale">Данные изменились — хвост перечитан</string>
     <string name="allocation_empty">Нечего распределять</string>
+    <string name="settings_tracking">Учёт</string>
+    <string name="settings_start_tracking">Начать учёт</string>
+    <string name="settings_overlay_required">Сначала разрешите показ поверх других приложений</string>
+    <string name="settings_tracking_since">Учёт ведётся с %1$s</string>
+    <string name="settings_allocate_now">Распределить сейчас</string>
+    <string name="settings_intervals">Интервалы</string>
+    <string name="settings_interval">Спрашивать каждые</string>
+    <string name="settings_snooze">Откладывать на</string>
+    <string name="settings_step">Шаг кнопок ±</string>
+    <string name="settings_categories">Категории</string>
+    <string name="settings_permissions">Разрешения</string>
+    <string name="unit_minutes">мин</string>
+    <string name="perm_overlay">Поверх других приложений</string>
+    <string name="perm_notifications">Уведомления</string>
+    <string name="perm_exact_alarms">Точные будильники</string>
+    <string name="perm_full_screen">Полноэкранные уведомления</string>
+    <string name="perm_battery">Без оптимизации батареи</string>
+    <string name="perm_fix">Настроить</string>
 </resources>
