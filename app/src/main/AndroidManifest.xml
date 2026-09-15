@@ -23,6 +23,20 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.allocation.AllocationActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true">
+            <intent-filter>
+                <action android:name="dev.boar.checktime.action.ALLOCATE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <receiver android:name=".scheduler.AlarmReceiver" android:exported="false" />
 
         <!-- exported=true: BOOT_COMPLETED и MY_PACKAGE_REPLACED — защищённые системные броадкасты. -->
