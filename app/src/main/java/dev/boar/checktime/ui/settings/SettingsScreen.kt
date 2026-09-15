@@ -25,12 +25,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -147,8 +149,14 @@ fun SettingsScreen(
 
 /** Числовое поле; коммитит каждое валидное значение в диапазоне Settings.MIN_MINUTES..MAX_MINUTES. */
 @Composable
-private fun MinutesField(label: String, value: Int, onCommit: (Int) -> Unit) {
-    var text by remember(value) { mutableStateOf(value.toString()) }
+internal fun MinutesField(label: String, value: Int, onCommit: (Int) -> Unit) {
+    var text by remember { mutableStateOf(value.toString()) }
+    var focused by remember { mutableStateOf(false) }
+    // Пока поле в фокусе, источник правды — то, что печатает пользователь;
+    // поздние эмиссии DataStore не должны затирать ввод.
+    LaunchedEffect(value, focused) {
+        if (!focused) text = value.toString()
+    }
     OutlinedTextField(
         value = text,
         onValueChange = { raw ->
@@ -159,7 +167,7 @@ private fun MinutesField(label: String, value: Int, onCommit: (Int) -> Unit) {
         suffix = { Text(stringResource(R.string.unit_minutes)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused },
     )
 }
 
