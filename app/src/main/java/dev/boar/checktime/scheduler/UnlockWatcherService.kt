@@ -39,11 +39,13 @@ class UnlockWatcherService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        // USER_PRESENT — protected broadcast (только система может его слать), но отправляет
+        // его SystemUI, а не uid системы, поэтому RECEIVER_NOT_EXPORTED его бы отфильтровал.
         ContextCompat.registerReceiver(
             this,
             unlockReceiver,
             IntentFilter(Intent.ACTION_USER_PRESENT),
-            ContextCompat.RECEIVER_NOT_EXPORTED,
+            ContextCompat.RECEIVER_EXPORTED,
         )
     }
 
