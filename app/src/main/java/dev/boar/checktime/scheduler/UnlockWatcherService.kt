@@ -24,6 +24,9 @@ import kotlinx.coroutines.launch
  * Foreground-уведомление — то же «Не расписано» (id 1), в шторке ничего лишнего.
  * По ACTION_USER_PRESENT запускает экран распределения (если хвост ≥ 1 мин и есть
  * overlay) и останавливается. Если процесс убьют — следующий будильник запустит заново.
+ * При остановке сервис сам приводит уведомление в консистентное состояние
+ * (см. onDestroy) — вызывающему коду не нужно полагаться на порядок относительно
+ * асинхронного stopService().
  */
 class UnlockWatcherService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -75,8 +78,22 @@ class UnlockWatcherService : Service() {
     override fun onDestroy() {
         unregisterReceiver(unlockReceiver)
         scope.cancel()
-        // Уведомление не снимаем: пока хвост есть, оно должно висеть (см. TailNotifier).
-        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_DETACH)
+        // Снимаем уведомление вместе с сервисом (а не DETACH), а не полагаемся на то, что
+        // TailNotifier.sync() из вызывающего кода успеет отработать до onDestroy() —
+        // stopService() асинхронен, и cancel() поверх ещё не отсоединённого foreground-
+        // уведомления система молча игнорирует. Вместо этого сами приводим уведомление
+        // в консистентное состояние сразу после снятия: если хвост всё ещё есть (путь
+        // разблокировки), TailNotifier тихо перевыставит его; если учёт сохранён — снимет.
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        val context = applicationContext
+        val container = context.appContainer
+        container.applicationScope.launch {
+            try {
+                TailNotifier.sync(context, container)
+            } catch (e: Exception) {
+                Log.e(TAG, "post-destroy tail sync failed", e)
+            }
+        }
         super.onDestroy()
     }
 
