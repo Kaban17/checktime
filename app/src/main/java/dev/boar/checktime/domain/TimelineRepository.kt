@@ -12,6 +12,12 @@ sealed interface AllocateResult {
     data object Stale : AllocateResult
 }
 
+sealed interface EditResult {
+    data object Done : EditResult
+    /** Запись исчезла, соседи не смежны или время вне допустимого диапазона. */
+    data object Rejected : EditResult
+}
+
 /**
  * Единственное место, которое пишет сегменты и двигает accountedUntil.
  * Инвариант: сегменты не пересекаются и покрывают [trackingStart, accountedUntil) без дыр.
@@ -51,4 +57,50 @@ class TimelineRepository(private val db: AppDatabase) {
         }
 
     fun observeSegments(from: Long, to: Long): Flow<List<Segment>> = segmentDao.observeOverlapping(from, to)
+
+    suspend fun segment(id: Long): Segment? = segmentDao.byId(id)
+
+    /** Смежные соседи (предыдущий, следующий) или null, если границы не с кем делить. */
+    suspend fun neighbours(segment: Segment): Pair<Segment?, Segment?> {
+        val prev = segmentDao.previousOf(segment.startAt)?.takeIf { it.endAt == segment.startAt }
+        val next = segmentDao.nextOf(segment.endAt)?.takeIf { it.startAt == segment.endAt }
+        return prev to next
+    }
+
+    suspend fun changeCategory(segmentId: Long, categoryId: Long): EditResult = db.withTransaction {
+        val s = segmentDao.byId(segmentId) ?: return@withTransaction EditResult.Rejected
+        segmentDao.update(s.copy(categoryId = categoryId))
+        EditResult.Done
+    }
+
+    /** Режет [segmentId] в точке [at] (строго внутри); вторая часть наследует категорию. */
+    suspend fun split(segmentId: Long, at: Long): EditResult = db.withTransaction {
+        val s = segmentDao.byId(segmentId) ?: return@withTransaction EditResult.Rejected
+        if (at <= s.startAt || at >= s.endAt) return@withTransaction EditResult.Rejected
+        segmentDao.update(s.copy(endAt = at))
+        segmentDao.insertAll(listOf(Segment(startAt = at, endAt = s.endAt, categoryId = s.categoryId)))
+        EditResult.Done
+    }
+
+    /** Двигает общую границу смежных [leftId] и [rightId] в [at] (строго между их внешними концами). */
+    suspend fun moveBoundary(leftId: Long, rightId: Long, at: Long): EditResult = db.withTransaction {
+        val l = segmentDao.byId(leftId) ?: return@withTransaction EditResult.Rejected
+        val r = segmentDao.byId(rightId) ?: return@withTransaction EditResult.Rejected
+        if (l.endAt != r.startAt) return@withTransaction EditResult.Rejected
+        if (at <= l.startAt || at >= r.endAt) return@withTransaction EditResult.Rejected
+        segmentDao.update(l.copy(endAt = at))
+        segmentDao.update(r.copy(startAt = at))
+        EditResult.Done
+    }
+
+    /** [keepId] поглощает смежный [otherId]; категория keep побеждает. */
+    suspend fun merge(keepId: Long, otherId: Long): EditResult = db.withTransaction {
+        val k = segmentDao.byId(keepId) ?: return@withTransaction EditResult.Rejected
+        val o = segmentDao.byId(otherId) ?: return@withTransaction EditResult.Rejected
+        val adjacent = k.endAt == o.startAt || o.endAt == k.startAt
+        if (!adjacent) return@withTransaction EditResult.Rejected
+        segmentDao.delete(o)
+        segmentDao.update(k.copy(startAt = minOf(k.startAt, o.startAt), endAt = maxOf(k.endAt, o.endAt)))
+        EditResult.Done
+    }
 }

@@ -88,4 +88,98 @@ class TimelineRepositoryTest {
         assertEquals(AllocateResult.Saved, repo.allocate(0, emptyList()))
         assertEquals(0L, repo.trackingState()!!.accountedUntil)
     }
+
+    /** 0–30 work, 30–45 rest, 45–75 work; accountedUntil = 75 мин. */
+    private suspend fun threeSegments(): List<Segment> {
+        repo.startTracking(now = 0)
+        repo.allocate(0, listOf(Allocation(work, 30), Allocation(rest, 15), Allocation(work, 30)))
+        return db.segmentDao().all()
+    }
+
+    @Test fun changeCategoryRewritesOnlyThatSegment() = runTest {
+        val segs = threeSegments()
+        assertEquals(EditResult.Done, repo.changeCategory(segs[1].id, work))
+        val after = db.segmentDao().all()
+        assertEquals(listOf(work, work, work), after.map { it.categoryId })
+        assertContiguous(after, 0, 75 * m)
+    }
+
+    @Test fun changeCategoryOfMissingSegmentIsRejected() = runTest {
+        threeSegments()
+        assertEquals(EditResult.Rejected, repo.changeCategory(999, work))
+    }
+
+    @Test fun splitCreatesTwoContiguousPartsWithSameCategory() = runTest {
+        val segs = threeSegments()
+        assertEquals(EditResult.Done, repo.split(segs[0].id, 10 * m))
+        val after = db.segmentDao().all()
+        assertEquals(4, after.size)
+        assertEquals(listOf(0L, 10 * m, 30 * m, 45 * m), after.map { it.startAt })
+        assertEquals(work, after[1].categoryId)
+        assertContiguous(after, 0, 75 * m)
+    }
+
+    @Test fun splitOutsideOrOnBoundaryIsRejected() = runTest {
+        val segs = threeSegments()
+        assertEquals(EditResult.Rejected, repo.split(segs[0].id, 0))
+        assertEquals(EditResult.Rejected, repo.split(segs[0].id, 30 * m))
+        assertEquals(EditResult.Rejected, repo.split(segs[0].id, 31 * m))
+        assertEquals(3, db.segmentDao().all().size)
+    }
+
+    @Test fun moveBoundaryShiftsBothNeighbours() = runTest {
+        val segs = threeSegments()
+        assertEquals(EditResult.Done, repo.moveBoundary(segs[0].id, segs[1].id, 20 * m))
+        val after = db.segmentDao().all()
+        assertEquals(20 * m, after[0].endAt)
+        assertEquals(20 * m, after[1].startAt)
+        assertContiguous(after, 0, 75 * m)
+    }
+
+    @Test fun moveBoundaryRejectsNonAdjacentAndOutOfRange() = runTest {
+        val segs = threeSegments()
+        assertEquals(EditResult.Rejected, repo.moveBoundary(segs[0].id, segs[2].id, 20 * m)) // не смежные
+        assertEquals(EditResult.Rejected, repo.moveBoundary(segs[0].id, segs[1].id, 0))      // = start левого
+        assertEquals(EditResult.Rejected, repo.moveBoundary(segs[0].id, segs[1].id, 45 * m)) // = end правого
+        assertEquals(EditResult.Rejected, repo.moveBoundary(segs[1].id, segs[0].id, 20 * m)) // перепутан порядок
+        assertContiguous(db.segmentDao().all(), 0, 75 * m)
+        assertEquals(30 * m, db.segmentDao().all()[0].endAt)
+    }
+
+    @Test fun mergeAbsorbsNeighbourAndKeepsOwnCategory() = runTest {
+        val segs = threeSegments()
+        assertEquals(EditResult.Done, repo.merge(keepId = segs[1].id, otherId = segs[2].id))
+        val after = db.segmentDao().all()
+        assertEquals(2, after.size)
+        assertEquals(rest, after[1].categoryId)
+        assertEquals(30 * m, after[1].startAt)
+        assertEquals(75 * m, after[1].endAt)
+        assertContiguous(after, 0, 75 * m)
+    }
+
+    @Test fun mergeWithPreviousWorksToo() = runTest {
+        val segs = threeSegments()
+        assertEquals(EditResult.Done, repo.merge(keepId = segs[1].id, otherId = segs[0].id))
+        val after = db.segmentDao().all()
+        assertEquals(listOf(rest, work), after.map { it.categoryId })
+        assertEquals(0L, after[0].startAt)
+        assertEquals(45 * m, after[0].endAt)
+        assertContiguous(after, 0, 75 * m)
+    }
+
+    @Test fun mergeRejectsNonAdjacent() = runTest {
+        val segs = threeSegments()
+        assertEquals(EditResult.Rejected, repo.merge(segs[0].id, segs[2].id))
+        assertEquals(3, db.segmentDao().all().size)
+    }
+
+    @Test fun neighboursAreAdjacentOnly() = runTest {
+        val segs = threeSegments()
+        val (p0, n0) = repo.neighbours(segs[0])
+        assertNull(p0)
+        assertEquals(segs[1].id, n0!!.id)
+        val (p2, n2) = repo.neighbours(segs[2])
+        assertEquals(segs[1].id, p2!!.id)
+        assertNull(n2)
+    }
 }
