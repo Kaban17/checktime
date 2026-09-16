@@ -200,4 +200,23 @@ class DayViewModelTest {
         assertEquals(R.string.edit_rejected, vm.messages.first())
         assertEquals(segs[0].startAt, container.timeline.segment(segs[0].id)!!.startAt)
     }
+
+    @Test fun editorClosesImmediatelyOnAction() = runTest {
+        val segs = seedThree()
+        val vm = vm()
+        vm.openEditor(segs[1].id)
+        vm.editor.first { it != null }
+        vm.changeCategory(sleep)
+        assertEquals(null, vm.editor.value)
+        vm.state.first { it.segments.any { r -> r.id == segs[1].id && r.category?.id == sleep } }
+    }
+
+    @Test fun reopeningCancelsPreviousLoad() = runTest {
+        val segs = seedThree()
+        val vm = vm()
+        vm.openEditor(segs[0].id)
+        vm.openEditor(segs[2].id)
+        val e = vm.editor.first { it != null }!!
+        assertEquals(segs[2].id, e.segment.id)
+    }
 }

@@ -18,6 +18,7 @@ import dev.boar.checktime.domain.clipSegments
 import dev.boar.checktime.domain.dayRange
 import dev.boar.checktime.domain.totalsByCategory
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -100,8 +101,11 @@ class DayViewModel(
     /** Id строкового ресурса для snackbar. */
     val messages: Flow<Int> = _messages.receiveAsFlow()
 
+    private var editorJob: Job? = null
+
     fun openEditor(segmentId: Long) {
-        viewModelScope.launch {
+        editorJob?.cancel()
+        editorJob = viewModelScope.launch {
             val segment = container.timeline.segment(segmentId) ?: return@launch
             val (prev, next) = container.timeline.neighbours(segment)
             val tree = container.categories.observeTree().first()
@@ -115,6 +119,7 @@ class DayViewModel(
     }
 
     fun closeEditor() {
+        editorJob?.cancel()
         _editor.value = null
     }
 
@@ -137,13 +142,13 @@ class DayViewModel(
         container.timeline.merge(keepId = e.segment.id, otherId = next.id)
     }
 
-    /** Общий каркас действия: выполнить над текущей записью, при отказе — сообщить; в любом случае закрыть. */
+    /** Общий каркас действия: закрыть шторку сразу же, затем выполнить над записью; при отказе — сообщить. */
     private fun edit(action: suspend (EditorState) -> EditResult) {
         val e = _editor.value ?: return
+        editorJob?.cancel()
+        _editor.value = null
         viewModelScope.launch {
-            val result = action(e)
-            _editor.value = null // сначала закрываем, потом сообщаем — тесты ждут сообщение
-            if (result == EditResult.Rejected) _messages.send(R.string.edit_rejected)
+            if (action(e) == EditResult.Rejected) _messages.send(R.string.edit_rejected)
         }
     }
 
