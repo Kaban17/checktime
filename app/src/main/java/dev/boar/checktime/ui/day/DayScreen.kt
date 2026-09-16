@@ -1,6 +1,7 @@
 package dev.boar.checktime.ui.day
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,10 +24,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,14 +53,38 @@ private val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE
 @Composable
 fun DayRoute(viewModel: DayViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val editor by viewModel.editor.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    DayScreen(
-        state = state,
-        onPrevious = viewModel::previousDay,
-        onNext = viewModel::nextDay,
-        onToday = viewModel::today,
-        onAllocate = { context.startActivity(PendingNotification.allocationIntent(context)) },
-    )
+    val snackbar = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.messages.collect { snackbar.showSnackbar(context.getString(it)) }
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        DayScreen(
+            state = state,
+            onPrevious = viewModel::previousDay,
+            onNext = viewModel::nextDay,
+            onToday = viewModel::today,
+            onAllocate = { context.startActivity(PendingNotification.allocationIntent(context)) },
+            onSegmentClick = viewModel::openEditor,
+        )
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+    }
+
+    editor?.let { e ->
+        SegmentEditSheet(
+            state = e,
+            onDismiss = viewModel::closeEditor,
+            onChangeCategory = viewModel::changeCategory,
+            onSplit = viewModel::split,
+            onMoveStart = viewModel::moveStart,
+            onMoveEnd = viewModel::moveEnd,
+            onMergePrevious = viewModel::mergeWithPrevious,
+            onMergeNext = viewModel::mergeWithNext,
+        )
+    }
 }
 
 @Composable
@@ -65,6 +94,7 @@ fun DayScreen(
     onNext: () -> Unit,
     onToday: () -> Unit,
     onAllocate: () -> Unit,
+    onSegmentClick: (Long) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -136,9 +166,9 @@ fun DayScreen(
                 }
             } else {
                 item { SectionTitle(stringResource(R.string.day_segments)) }
-                items(state.segments, key = { "s${it.startAt}" }) { s ->
+                items(state.segments, key = { "s${it.id}" }) { s ->
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                        Modifier.fillMaxWidth().clickable { onSegmentClick(s.id) }.padding(horizontal = 16.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(

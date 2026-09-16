@@ -49,9 +49,9 @@ in the `Application` class — no Hilt.
   moves `accountedUntil`. It owns the invariants: segments never overlap and
   cover `[trackingStart, accountedUntil)` with no gaps. `allocate` is a single
   Room transaction that re-checks `accountedUntil` inside the transaction so a
-  stale popup cannot double-write. `changeCategory`, `moveBoundary`, `split`,
-  `merge` are stage-2 operations, not implemented yet. Pure stats/day-slicing
-  functions live here too.
+  stale popup cannot double-write. `changeCategory`, `split`, `moveBoundary`,
+  `merge` — тоже единичные транзакции с проверкой смежности/диапазона,
+  возвращают `EditResult`. Pure stats/day-slicing functions live here too.
 - `scheduler/` — `AlarmScheduler` keeps exactly one exact alarm
   (`accountedUntil + N` after a save, `now + snooze` after a postpone).
   `AlarmReceiver` posts the ongoing "Не расписано: X мин" notification, sets
@@ -65,7 +65,8 @@ in the `Application` class — no Hilt.
 - `ui/` — Compose screens + ViewModels. Bottom nav: Day · Settings (Stats is stage 3)
   (settings includes the group/category editor and the permissions checklist).
   `AllocationActivity` is a separate `singleTask` activity, not part of the
-  nav graph; back gesture = postpone.
+  nav graph; back gesture = postpone. Тап по записи на экране «День» открывает
+  `SegmentEditSheet`.
 
 Testing note: Robolectric picks up `TestCheckTimeApp` (in `app/src/test`) as the
 `Application` class instead of the real one, which wires `MainActivity` to an

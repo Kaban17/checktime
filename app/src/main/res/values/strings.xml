@@ -53,6 +53,12 @@
     <string name="day_empty">За этот день записей нет</string>
     <string name="day_unknown_category">Удалённая категория</string>
     <string name="edit_rejected">Не удалось изменить запись — данные уже поменялись</string>
+    <string name="edit_category">Категория</string>
+    <string name="edit_split">Разбить</string>
+    <string name="edit_move_start">Сдвинуть начало</string>
+    <string name="edit_move_end">Сдвинуть конец</string>
+    <string name="edit_merge_previous">Слить с предыдущей</string>
+    <string name="edit_merge_next">Слить со следующей</string>
     <string name="tab_day">День</string>
     <string name="tab_settings">Настройки</string>
 </resources>
