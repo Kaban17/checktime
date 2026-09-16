@@ -8,6 +8,7 @@ import dev.boar.checktime.MainDispatcherRule
 import dev.boar.checktime.domain.Allocation
 import dev.boar.checktime.domain.TimeMath.MINUTE_MS
 import dev.boar.checktime.scheduler.PendingNotification
+import dev.boar.checktime.scheduler.UnlockWatcherService
 import dev.boar.checktime.testContainer
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -83,6 +84,7 @@ class AllocationViewModelTest {
         assertEquals(30 * MINUTE_MS, container.timeline.trackingState()!!.accountedUntil)
         // следующий будильник: новая граница + interval (30 мин по умолчанию)
         assertEquals(60 * MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
+        assertEquals(UnlockWatcherService::class.java.name, shadowOf(context).nextStoppedService.component!!.className)
     }
 
     @Test fun saveIsIgnoredWhileIncomplete() = runTest {
@@ -118,5 +120,6 @@ class AllocationViewModelTest {
         vm.postpone()
         assertEquals(AllocationEvent.Postponed, vm.events.first())
         assertEquals(now + 10 * MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
+        assertEquals(UnlockWatcherService::class.java.name, shadowOf(context).nextStoppedService.component!!.className)
     }
 }

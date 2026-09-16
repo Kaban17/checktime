@@ -9,7 +9,7 @@ import android.content.Intent
 import dev.boar.checktime.R
 import dev.boar.checktime.ui.common.formatDuration
 
-/** Постоянное уведомление «Не расписано: X мин». Тап и fullScreenIntent открывают экран распределения. */
+/** Постоянное уведомление «Не расписано: X мин». Тап открывает экран распределения. */
 object PendingNotification {
     const val ID = 1
     const val ACTION_ALLOCATE = "dev.boar.checktime.action.ALLOCATE"
@@ -30,13 +30,13 @@ object PendingNotification {
         )
     }
 
-    /** [urgent] — по будильнику: канал HIGH + fullScreenIntent. Иначе тихое обновление. */
-    fun show(context: Context, tailMinutes: Int, urgent: Boolean) {
+    /** [urgent] — по будильнику: канал HIGH (heads-up один раз). Иначе тихое обновление. */
+    fun build(context: Context, tailMinutes: Int, urgent: Boolean): Notification {
         val content = PendingIntent.getActivity(
             context, 0, allocationIntent(context),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val builder = Notification.Builder(context, if (urgent) CHANNEL_ALARM else CHANNEL_TAIL)
+        return Notification.Builder(context, if (urgent) CHANNEL_ALARM else CHANNEL_TAIL)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.notification_title, formatDuration(tailMinutes)))
             .setContentText(context.getString(R.string.notification_text))
@@ -44,8 +44,11 @@ object PendingNotification {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setCategory(Notification.CATEGORY_REMINDER)
-        if (urgent) builder.setFullScreenIntent(content, true)
-        context.getSystemService(NotificationManager::class.java).notify(ID, builder.build())
+            .build()
+    }
+
+    fun show(context: Context, tailMinutes: Int, urgent: Boolean) {
+        context.getSystemService(NotificationManager::class.java).notify(ID, build(context, tailMinutes, urgent))
     }
 
     fun cancel(context: Context) = context.getSystemService(NotificationManager::class.java).cancel(ID)

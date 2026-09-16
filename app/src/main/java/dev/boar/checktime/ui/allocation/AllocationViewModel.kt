@@ -12,6 +12,7 @@ import dev.boar.checktime.domain.AllocateResult
 import dev.boar.checktime.domain.AllocationDraft
 import dev.boar.checktime.domain.TimeMath
 import dev.boar.checktime.scheduler.TailNotifier
+import dev.boar.checktime.scheduler.UnlockWatcherService
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -89,6 +90,7 @@ class AllocationViewModel(
                 AllocateResult.Saved -> {
                     val settings = container.settings.settings.first()
                     container.alarms.schedule(TimeMath.nextAlarmAt(s.end, settings.intervalMinutes))
+                    UnlockWatcherService.stop(appContext)
                     TailNotifier.sync(appContext, container)
                     _events.send(AllocationEvent.Saved)
                 }
@@ -104,6 +106,7 @@ class AllocationViewModel(
         viewModelScope.launch {
             val settings = container.settings.settings.first()
             container.alarms.schedule(TimeMath.snoozeAlarmAt(container.now(), settings.snoozeMinutes))
+            UnlockWatcherService.stop(appContext)
             _events.send(AllocationEvent.Postponed)
         }
     }

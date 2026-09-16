@@ -77,9 +77,6 @@ fun SettingsRoute(viewModel: SettingsViewModel, onOpenCategories: () -> Unit) {
         onFixExactAlarms = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) context.startActivity(Permissions.exactAlarmSettingsIntent(context))
         },
-        onFixFullScreen = {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) context.startActivity(Permissions.fullScreenIntentSettingsIntent(context))
-        },
         onFixBattery = { context.startActivity(Permissions.batterySettingsIntent(context)) },
     )
 }
@@ -97,7 +94,6 @@ fun SettingsScreen(
     onFixOverlay: () -> Unit,
     onFixNotifications: () -> Unit,
     onFixExactAlarms: () -> Unit,
-    onFixFullScreen: () -> Unit,
     onFixBattery: () -> Unit,
 ) {
     if (state == null) return
@@ -139,9 +135,6 @@ fun SettingsScreen(
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             PermissionRow(stringResource(R.string.perm_exact_alarms), permissions.exactAlarms, onFixExactAlarms)
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            PermissionRow(stringResource(R.string.perm_full_screen), permissions.fullScreenIntent, onFixFullScreen)
         }
         PermissionRow(stringResource(R.string.perm_battery), permissions.batteryUnrestricted, onFixBattery)
     }

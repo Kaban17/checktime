@@ -55,15 +55,18 @@ in the `Application` class — no Hilt.
   here too.
 - `scheduler/` — `AlarmScheduler` keeps exactly one exact alarm
   (`accountedUntil + N` after a save, `now + snooze` after a postpone).
-  `AlarmReceiver` posts the ongoing "Не расписано: X мин" notification
-  (with `fullScreenIntent`) and directly starts `AllocationActivity` — this
-  relies on the user having granted "display over other apps"
-  (`SYSTEM_ALERT_WINDOW`), which is what exempts background activity starts.
-  `BootReceiver` re-arms the alarm.
+  `AlarmReceiver` posts the ongoing "Не расписано: X мин" notification, sets
+  the next alarm at `now + N`, and starts `UnlockWatcherService` (foreground,
+  `specialUse`, same notification id 1), which listens for `ACTION_USER_PRESENT`
+  and starts `AllocationActivity` on unlock — relying on the user having
+  granted "display over other apps" (`SYSTEM_ALERT_WINDOW`), which is what
+  exempts background activity starts — then stops itself. The popup never
+  shows itself on the alarm and never wakes the screen. `BootReceiver`
+  re-arms the alarm.
 - `ui/` — Compose screens + ViewModels. Bottom nav: Day · Settings (Stats is stage 3)
   (settings includes the group/category editor and the permissions checklist).
-  `AllocationActivity` is a separate `singleTask`, `showWhenLocked` activity,
-  not part of the nav graph; back gesture = postpone.
+  `AllocationActivity` is a separate `singleTask` activity, not part of the
+  nav graph; back gesture = postpone.
 
 Testing note: Robolectric picks up `TestCheckTimeApp` (in `app/src/test`) as the
 `Application` class instead of the real one, which wires `MainActivity` to an

@@ -3,7 +3,6 @@ package dev.boar.checktime.scheduler
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.provider.Settings
 import android.util.Log
 import dev.boar.checktime.AppContainer
 import dev.boar.checktime.appContainer
@@ -32,9 +31,10 @@ class AlarmReceiver : BroadcastReceiver() {
     companion object {
         /**
          * Вызывается по будильнику, после загрузки и после обновления приложения.
+         * Попап никогда не показывается сам по будильнику и не включает экран.
          * 1. Учёт не начат — ничего. Хвост < 1 мин — снять уведомление, будильник на accountedUntil + N.
-         * 2. Иначе — уведомление с fullScreenIntent, страховочный будильник через snooze
-         *    (если экран не откроется или его проигнорируют) и прямой запуск экрана, когда есть overlay.
+         * 2. Иначе — уведомление «Не расписано», следующий будильник через интервал и запуск
+         *    UnlockWatcherService, который покажет попап при разблокировке телефона.
          */
         suspend fun handle(context: Context, container: AppContainer) {
             val state = container.timeline.trackingState() ?: return
@@ -47,10 +47,9 @@ class AlarmReceiver : BroadcastReceiver() {
                 return
             }
             PendingNotification.show(context, tail, urgent = true)
-            container.alarms.schedule(TimeMath.snoozeAlarmAt(now, settings.snoozeMinutes))
-            if (Settings.canDrawOverlays(context)) {
-                context.startActivity(PendingNotification.allocationIntent(context))
-            }
+            // Следующее напоминание — через интервал; попап покажет UnlockWatcherService при разблокировке.
+            container.alarms.schedule(now + settings.intervalMinutes * TimeMath.MINUTE_MS)
+            UnlockWatcherService.start(context, tail)
         }
     }
 }

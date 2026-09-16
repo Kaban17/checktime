@@ -27,8 +27,6 @@ class AllocationActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setShowWhenLocked(true)
-        setTurnScreenOn(true)
         enableEdgeToEdge()
         setContent {
             CheckTimeTheme {

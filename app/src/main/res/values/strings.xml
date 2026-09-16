@@ -27,7 +27,6 @@
     <string name="perm_overlay">Поверх других приложений</string>
     <string name="perm_notifications">Уведомления</string>
     <string name="perm_exact_alarms">Точные будильники</string>
-    <string name="perm_full_screen">Полноэкранные уведомления</string>
     <string name="perm_battery">Без оптимизации батареи</string>
     <string name="perm_fix">Настроить</string>
     <string name="categories_title">Категории</string>

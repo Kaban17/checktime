@@ -40,26 +40,30 @@ class AlarmReceiverTest {
         assertNull(shadowOf(notifications).getNotification(PendingNotification.ID))
         assertNull(shadowOf(alarmManager).peekNextScheduledAlarm())
         assertNull(shadowOf(context).nextStartedActivity)
+        assertNull(shadowOf(context).nextStartedService)
     }
 
-    @Test fun withTailShowsNotificationStartsActivityAndArmsSnooze() = runTest {
+    @Test fun withTailNotifiesStartsWatcherAndArmsNextInterval() = runTest {
         container.timeline.startTracking(now = 0)
         now = 47 * MINUTE_MS
         AlarmReceiver.handle(context, container)
 
         assertNotNull(shadowOf(notifications).getNotification(PendingNotification.ID))
-        assertEquals(PendingNotification.ACTION_ALLOCATE, shadowOf(context).nextStartedActivity.action)
-        // snooze по умолчанию 10 мин (Settings())
-        assertEquals(now + 10 * MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
+        // попап по будильнику не запускается
+        assertNull(shadowOf(context).nextStartedActivity)
+        assertEquals(UnlockWatcherService::class.java.name, shadowOf(context).nextStartedService.component!!.className)
+        // следующий будильник — через interval (30 мин по умолчанию), а не snooze
+        assertEquals(now + 30 * MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
     }
 
-    @Test fun withoutOverlayPermissionOnlyNotifies() = runTest {
+    @Test fun withoutOverlayPermissionStillNotifiesAndStartsWatcher() = runTest {
         ShadowSettings.setCanDrawOverlays(false)
         container.timeline.startTracking(now = 0)
         now = 5 * MINUTE_MS
         AlarmReceiver.handle(context, container)
         assertNotNull(shadowOf(notifications).getNotification(PendingNotification.ID))
         assertNull(shadowOf(context).nextStartedActivity)
+        assertNotNull(shadowOf(context).nextStartedService)
     }
 
     @Test fun withoutTailCancelsNotificationAndArmsNextInterval() = runTest {
@@ -69,6 +73,7 @@ class AlarmReceiverTest {
         AlarmReceiver.handle(context, container)
         assertNull(shadowOf(notifications).getNotification(PendingNotification.ID))
         assertNull(shadowOf(context).nextStartedActivity)
+        assertNull(shadowOf(context).nextStartedService)
         // interval по умолчанию 30 мин, accountedUntil = 0
         assertEquals(30 * MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
     }
