@@ -51,6 +51,7 @@
     <string name="day_segments">Записи</string>
     <string name="day_empty">За этот день записей нет</string>
     <string name="day_unknown_category">Удалённая категория</string>
+    <string name="edit_rejected">Не удалось изменить запись — данные уже поменялись</string>
     <string name="tab_day">День</string>
     <string name="tab_settings">Настройки</string>
 </resources>

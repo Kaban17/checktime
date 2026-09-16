@@ -6,33 +6,41 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.boar.checktime.AppContainer
+import dev.boar.checktime.R
 import dev.boar.checktime.data.Category
 import dev.boar.checktime.data.Group
 import dev.boar.checktime.data.GroupWithCategories
 import dev.boar.checktime.data.Segment
 import dev.boar.checktime.data.TrackingState
+import dev.boar.checktime.domain.EditResult
 import dev.boar.checktime.domain.TimeMath
 import dev.boar.checktime.domain.clipSegments
 import dev.boar.checktime.domain.dayRange
 import dev.boar.checktime.domain.totalsByCategory
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
 data class CategoryTotal(val category: Category, val group: Group, val millis: Long)
 
-data class SegmentRow(val startAt: Long, val endAt: Long, val category: Category?, val group: Group?)
+data class SegmentRow(val id: Long, val startAt: Long, val endAt: Long, val category: Category?, val group: Group?)
 
 data class DayUiState(
     val date: LocalDate,
@@ -43,6 +51,17 @@ data class DayUiState(
     val tailMinutes: Int,
     /** now < accountedUntil больше чем на минуту — часы перевели назад. */
     val clockWentBack: Boolean,
+)
+
+/** Что открыто в шторке правки: запись, её смежные соседи и данные для меню. */
+data class EditorState(
+    val segment: Segment,
+    val previous: Segment?,
+    val next: Segment?,
+    val category: Category?,
+    /** Группы только с неархивными категориями — для смены категории. */
+    val groups: List<GroupWithCategories>,
+    val stepMinutes: Int,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -74,6 +93,60 @@ class DayViewModel(
     ) { (d, segments), tree, tracking, _ -> build(d, segments, tree, tracking) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyState(date.value))
 
+    private val _editor = MutableStateFlow<EditorState?>(null)
+    val editor: StateFlow<EditorState?> = _editor.asStateFlow()
+
+    private val _messages = Channel<Int>(Channel.BUFFERED)
+    /** Id строкового ресурса для snackbar. */
+    val messages: Flow<Int> = _messages.receiveAsFlow()
+
+    fun openEditor(segmentId: Long) {
+        viewModelScope.launch {
+            val segment = container.timeline.segment(segmentId) ?: return@launch
+            val (prev, next) = container.timeline.neighbours(segment)
+            val tree = container.categories.observeTree().first()
+            val groups = tree
+                .map { g -> g.copy(categories = g.categories.filter { !it.archived }) }
+                .filter { it.categories.isNotEmpty() }
+            val category = tree.flatMap { it.categories }.firstOrNull { it.id == segment.categoryId }
+            val step = container.settings.settings.first().stepMinutes
+            _editor.value = EditorState(segment, prev, next, category, groups, step)
+        }
+    }
+
+    fun closeEditor() {
+        _editor.value = null
+    }
+
+    fun changeCategory(categoryId: Long) = edit { e -> container.timeline.changeCategory(e.segment.id, categoryId) }
+    fun split(at: Long) = edit { e -> container.timeline.split(e.segment.id, at) }
+    fun moveStart(at: Long) = edit { e ->
+        val prev = e.previous ?: return@edit EditResult.Rejected
+        container.timeline.moveBoundary(prev.id, e.segment.id, at)
+    }
+    fun moveEnd(at: Long) = edit { e ->
+        val next = e.next ?: return@edit EditResult.Rejected
+        container.timeline.moveBoundary(e.segment.id, next.id, at)
+    }
+    fun mergeWithPrevious() = edit { e ->
+        val prev = e.previous ?: return@edit EditResult.Rejected
+        container.timeline.merge(keepId = e.segment.id, otherId = prev.id)
+    }
+    fun mergeWithNext() = edit { e ->
+        val next = e.next ?: return@edit EditResult.Rejected
+        container.timeline.merge(keepId = e.segment.id, otherId = next.id)
+    }
+
+    /** Общий каркас действия: выполнить над текущей записью, при отказе — сообщить; в любом случае закрыть. */
+    private fun edit(action: suspend (EditorState) -> EditResult) {
+        val e = _editor.value ?: return
+        viewModelScope.launch {
+            val result = action(e)
+            _editor.value = null // сначала закрываем, потом сообщаем — тесты ждут сообщение
+            if (result == EditResult.Rejected) _messages.send(R.string.edit_rejected)
+        }
+    }
+
     fun previousDay() = date.update { it.minusDays(1) }
     fun nextDay() = date.update { it.plusDays(1) }
     fun today() = date.update { currentDate() }
@@ -92,7 +165,7 @@ class DayViewModel(
             .sortedByDescending { it.millis }
         val rows = segments.map { s ->
             val hit = categories[s.categoryId]
-            SegmentRow(s.startAt, s.endAt, hit?.first, hit?.second)
+            SegmentRow(s.id, s.startAt, s.endAt, hit?.first, hit?.second)
         }
         val now = container.now()
         return DayUiState(
