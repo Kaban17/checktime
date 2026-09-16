@@ -81,6 +81,17 @@ class SegmentEditSheetTest {
         compose.onNodeWithText("Слить со следующей").assertIsNotEnabled()
     }
 
+    @Test fun splitDisabledForOneMinuteSegment() {
+        val tiny = Segment(id = 11, startAt = 9 * h, endAt = 9 * h + MINUTE_MS, categoryId = 2)
+        compose.setContent {
+            SegmentEditContent(
+                EditorState(tiny, prev, next, food, groups, stepMinutes = 5),
+                onChangeCategory = {}, onSplit = {}, onMoveStart = {}, onMoveEnd = {}, onMergePrevious = {}, onMergeNext = {}, zone = zone,
+            )
+        }
+        compose.onNodeWithText("Разбить").assertIsNotEnabled()
+    }
+
     @Test fun mergeNextCallsBack() {
         var merged = false
         compose.setContent {

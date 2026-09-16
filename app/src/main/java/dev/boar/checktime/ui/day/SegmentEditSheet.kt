@@ -132,9 +132,10 @@ private fun Menu(
 ) {
     val hasPrev = state.previous != null
     val hasNext = state.next != null
+    val canSplit = state.segment.endAt - state.segment.startAt >= 2 * TimeMath.MINUTE_MS
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = onPickCategory, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.edit_category)) }
-        OutlinedButton(onClick = onSplit, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.edit_split)) }
+        OutlinedButton(onClick = onSplit, enabled = canSplit, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.edit_split)) }
         OutlinedButton(onClick = onMoveStart, enabled = hasPrev, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.edit_move_start)) }
         OutlinedButton(onClick = onMoveEnd, enabled = hasNext, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.edit_move_end)) }
         OutlinedButton(onClick = onMergePrevious, enabled = hasPrev, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.edit_merge_previous)) }

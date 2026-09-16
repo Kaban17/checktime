@@ -69,4 +69,17 @@ class TimeStepperFieldTest {
         compose.onNodeWithTag("time-value").assertTextEquals("12:00")
         assertEquals(at(day, 12, 0), value)
     }
+
+    @Test fun emptyRangeDoesNotCrashOnStep() {
+        val range = at(day, 12, 10)..at(day, 12, 5)
+        var value by mutableStateOf(at(day, 12, 7))
+        compose.setContent {
+            TimeStepperField(value = value, range = range, stepMinutes = 5, onValueChange = { value = it }, zone = zone)
+        }
+        compose.onNodeWithTag("time-value").assertTextEquals("12:07")
+        compose.onNodeWithTag("time-inc").performClick()
+        compose.onNodeWithTag("time-value").assertTextEquals("12:07")
+        compose.onNodeWithTag("time-dec").performClick()
+        compose.onNodeWithTag("time-value").assertTextEquals("12:07")
+    }
 }

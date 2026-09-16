@@ -58,10 +58,11 @@ fun TimeStepperField(
     var showPicker by remember { mutableStateOf(false) }
     val step = stepMinutes * TimeMath.MINUTE_MS
     val inRange = value in range
+    val empty = range.first > range.last
 
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         RepeatButton(
-            onClick = { onValueChange((value - step).coerceIn(range.first, range.last)) },
+            onClick = { if (!empty) onValueChange((value - step).coerceIn(range.first, range.last)) },
             modifier = Modifier.testTag("time-dec"),
         ) { Text("−", style = MaterialTheme.typography.titleLarge) }
         Text(
@@ -74,7 +75,7 @@ fun TimeStepperField(
             color = if (inRange) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
         )
         RepeatButton(
-            onClick = { onValueChange((value + step).coerceIn(range.first, range.last)) },
+            onClick = { if (!empty) onValueChange((value + step).coerceIn(range.first, range.last)) },
             modifier = Modifier.testTag("time-inc"),
         ) { Icon(Icons.Default.Add, contentDescription = null) }
     }
