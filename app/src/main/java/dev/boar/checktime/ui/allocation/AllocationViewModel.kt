@@ -86,6 +86,8 @@ class AllocationViewModel(
         viewModelScope.launch {
             val s = _state.value as? AllocationUiState.Ready ?: return@launch
             if (!s.draft.isComplete) return@launch
+            // Защита от двойного «Готово»: пока идёт allocate, повторный клик не видит Ready.
+            _state.value = AllocationUiState.Loading
             when (container.timeline.allocate(expectedAccountedUntil = s.start, allocations = s.draft.allocations())) {
                 AllocateResult.Saved -> {
                     val settings = container.settings.settings.first()
@@ -109,6 +111,12 @@ class AllocationViewModel(
             UnlockWatcherService.stop(appContext)
             _events.send(AllocationEvent.Postponed)
         }
+    }
+
+    /** Экран вернули на передний план: если пользователь ничего не ввёл, а время ушло — перечитать хвост. */
+    fun refreshIfUntouched() {
+        val s = _state.value as? AllocationUiState.Ready ?: return
+        if (s.draft.allocated == 0 && container.now() - s.end >= TimeMath.MINUTE_MS) load()
     }
 
     companion object {

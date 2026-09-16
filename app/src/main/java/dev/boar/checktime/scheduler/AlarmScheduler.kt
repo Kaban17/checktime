@@ -27,7 +27,17 @@ class AlarmScheduler(private val context: Context) {
         }
     }
 
-    fun cancel() = alarmManager.cancel(operation())
+    fun cancel() {
+        val op = operation()
+        alarmManager.cancel(op)
+        op.cancel()
+    }
+
+    /** true, если наш PendingIntent существует — после force-stop / очистки система его снимает вместе с будильником. */
+    fun isScheduled(): Boolean = PendingIntent.getBroadcast(
+        context, REQUEST_CODE, Intent(context, AlarmReceiver::class.java),
+        PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
+    ) != null
 
     private companion object {
         const val REQUEST_CODE = 100

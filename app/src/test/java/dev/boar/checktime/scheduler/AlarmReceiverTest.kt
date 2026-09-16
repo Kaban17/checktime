@@ -87,4 +87,28 @@ class AlarmReceiverTest {
         TailNotifier.sync(context, container)
         assertNull(shadowOf(notifications).getNotification(PendingNotification.ID))
     }
+
+    @Test fun tailNotifierReArmsMissingAlarm() = runTest {
+        container.timeline.startTracking(now = 0)
+        now = 3 * MINUTE_MS
+        assertNull(shadowOf(alarmManager).peekNextScheduledAlarm())
+        TailNotifier.sync(context, container)
+        // accountedUntil + 30 мин в будущем — ставим именно его
+        assertEquals(30 * MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
+    }
+
+    @Test fun tailNotifierDoesNotArmInThePast() = runTest {
+        container.timeline.startTracking(now = 0)
+        now = 45 * MINUTE_MS
+        TailNotifier.sync(context, container)
+        assertEquals(now + MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
+    }
+
+    @Test fun tailNotifierKeepsExistingAlarm() = runTest {
+        container.timeline.startTracking(now = 0)
+        container.alarms.schedule(7 * MINUTE_MS)
+        now = 3 * MINUTE_MS
+        TailNotifier.sync(context, container)
+        assertEquals(7 * MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
+    }
 }

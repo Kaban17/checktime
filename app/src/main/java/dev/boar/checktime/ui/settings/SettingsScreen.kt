@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -34,7 +35,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -140,27 +143,48 @@ fun SettingsScreen(
     }
 }
 
-/** Числовое поле; коммитит каждое валидное значение в диапазоне Settings.MIN_MINUTES..MAX_MINUTES. */
+/** Числовое поле; коммитит валидное значение из диапазона Settings.MIN_MINUTES..MAX_MINUTES
+ *  при потере фокуса или по IME Done, а не на каждый символ. */
 @Composable
 internal fun MinutesField(label: String, value: Int, onCommit: (Int) -> Unit) {
     var text by remember { mutableStateOf(value.toString()) }
     var focused by remember { mutableStateOf(false) }
-    // Пока поле в фокусе, источник правды — то, что печатает пользователь;
-    // поздние эмиссии DataStore не должны затирать ввод.
+    val focusManager = LocalFocusManager.current
+
+    // Пока поле в фокусе, источник правды — ввод пользователя; поздние эмиссии DataStore его не затирают.
     LaunchedEffect(value, focused) {
         if (!focused) text = value.toString()
     }
+
+    fun commit() {
+        val parsed = text.toIntOrNull()
+        if (parsed != null && parsed in Settings.MIN_MINUTES..Settings.MAX_MINUTES) {
+            if (parsed != value) onCommit(parsed)
+        } else {
+            text = value.toString() // невалидное — откатываем к сохранённому
+        }
+    }
+
     OutlinedTextField(
         value = text,
-        onValueChange = { raw ->
-            text = raw.filter { it.isDigit() }.take(4)
-            text.toIntOrNull()?.let { if (it in Settings.MIN_MINUTES..Settings.MAX_MINUTES) onCommit(it) }
-        },
+        onValueChange = { raw -> text = raw.filter { it.isDigit() }.take(4) },
         label = { Text(label) },
         suffix = { Text(stringResource(R.string.unit_minutes)) },
         singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(
+            onDone = {
+                commit()
+                // Обновляем focused сразу же, чтобы последующий onFocusChanged(false) от
+                // clearFocus() не закоммитил то же значение повторно.
+                focused = false
+                focusManager.clearFocus()
+            },
+        ),
+        modifier = Modifier.fillMaxWidth().onFocusChanged { state ->
+            if (focused && !state.isFocused) commit()
+            focused = state.isFocused
+        },
     )
 }
 

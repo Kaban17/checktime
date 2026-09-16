@@ -12,6 +12,7 @@
     <string name="allocation_postpone">Отложить</string>
     <string name="allocation_stale">Данные изменились — хвост перечитан</string>
     <string name="allocation_empty">Нечего распределять</string>
+    <string name="allocation_no_categories">Нет активных категорий — добавьте их в настройках</string>
     <string name="settings_tracking">Учёт</string>
     <string name="settings_start_tracking">Начать учёт</string>
     <string name="settings_overlay_required">Сначала разрешите показ поверх других приложений</string>

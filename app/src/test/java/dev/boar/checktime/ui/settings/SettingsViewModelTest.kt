@@ -60,4 +60,11 @@ class SettingsViewModelTest {
         vm.setInterval(15).join()
         assertNull(shadowOf(alarmManager).peekNextScheduledAlarm())
     }
+
+    @Test fun changingIntervalNeverArmsInThePast() = runTest {
+        vm.startTracking().join()
+        now += 50 * MINUTE_MS
+        vm.setInterval(15).join()
+        assertEquals(now + MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
+    }
 }

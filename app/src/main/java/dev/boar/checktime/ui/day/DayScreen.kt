@@ -43,7 +43,7 @@ import dev.boar.checktime.ui.common.formatTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale("ru"))
+private val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.forLanguageTag("ru"))
 
 @Composable
 fun DayRoute(viewModel: DayViewModel) {

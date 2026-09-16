@@ -43,7 +43,9 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     private suspend fun rearm() {
         val tracking = container.timeline.trackingState() ?: return
         val settings = container.settings.settings.first()
-        container.alarms.schedule(TimeMath.nextAlarmAt(tracking.accountedUntil, settings.intervalMinutes))
+        // Не ставим будильник в прошлое: он сработал бы немедленно поверх экрана настроек.
+        val at = maxOf(TimeMath.nextAlarmAt(tracking.accountedUntil, settings.intervalMinutes), container.now() + TimeMath.MINUTE_MS)
+        container.alarms.schedule(at)
     }
 
     companion object {

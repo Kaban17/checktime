@@ -34,6 +34,11 @@ class AllocationActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onStart() {
+        super.onStart()
+        viewModel.refreshIfUntouched()
+    }
 }
 
 @Composable
@@ -49,7 +54,7 @@ fun AllocationRoute(viewModel: AllocationViewModel, onFinished: () -> Unit) {
             }
         }
     }
-    LaunchedEffect(state) {
+    LaunchedEffect(state is AllocationUiState.Empty) {
         if (state is AllocationUiState.Empty) onFinished()
     }
     BackHandler { viewModel.postpone() }

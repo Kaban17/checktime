@@ -48,6 +48,10 @@ object PendingNotification {
     }
 
     fun show(context: Context, tailMinutes: Int, urgent: Boolean) {
+        // Обновление существующего LOW-уведомления с setOnlyAlertOnce не даёт heads-up —
+        // снимаем его перед повторной постановкой urgent-уведомления. Если оно занято
+        // foreground-сервисом, cancel не сработает — это нормально: сервис уже ждёт разблокировки.
+        if (urgent) cancel(context)
         context.getSystemService(NotificationManager::class.java).notify(ID, build(context, tailMinutes, urgent))
     }
 

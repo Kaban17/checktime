@@ -87,18 +87,25 @@ private fun ReadyContent(
                 color = if (draft.remaining == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
             )
         }
-        LazyColumn(Modifier.weight(1f)) {
-            state.groups.forEach { g ->
-                item(key = "g${g.group.id}") {
-                    Text(
-                        g.group.name,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color(g.group.color),
-                    )
-                }
-                items(g.categories, key = { "c${it.id}" }) { c ->
-                    CategoryRow(c, draft.of(c.id), onIncrement, onDecrement, onAssignRest)
+        if (state.groups.isEmpty()) {
+            Text(
+                stringResource(R.string.allocation_no_categories),
+                modifier = Modifier.weight(1f).padding(16.dp),
+            )
+        } else {
+            LazyColumn(Modifier.weight(1f)) {
+                state.groups.forEach { g ->
+                    item(key = "g${g.group.id}") {
+                        Text(
+                            g.group.name,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color(g.group.color),
+                        )
+                    }
+                    items(g.categories, key = { "c${it.id}" }) { c ->
+                        CategoryRow(c, draft.of(c.id), onIncrement, onDecrement, onAssignRest)
+                    }
                 }
             }
         }

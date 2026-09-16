@@ -122,4 +122,27 @@ class AllocationViewModelTest {
         assertEquals(now + 10 * MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
         assertEquals(UnlockWatcherService::class.java.name, shadowOf(context).nextStoppedService.component!!.className)
     }
+
+    @Test fun refreshIfUntouchedReloadsStaleTailWhenNothingEntered() = runTest {
+        container.timeline.startTracking(0)
+        now = 30 * MINUTE_MS
+        val vm = vm()
+        vm.ready()
+        now = 45 * MINUTE_MS
+        vm.refreshIfUntouched()
+        val reloaded = vm.state.first { it is AllocationUiState.Ready && it.end == 45 * MINUTE_MS } as AllocationUiState.Ready
+        assertEquals(45, reloaded.draft.totalMinutes)
+    }
+
+    @Test fun refreshIfUntouchedDoesNothingAfterUserEditedDraft() = runTest {
+        container.timeline.startTracking(0)
+        now = 30 * MINUTE_MS
+        val vm = vm()
+        vm.ready()
+        vm.edit { it.increment(sleep) }
+        now = 45 * MINUTE_MS
+        vm.refreshIfUntouched()
+        val s = vm.state.first { it is AllocationUiState.Ready } as AllocationUiState.Ready
+        assertEquals(30 * MINUTE_MS, s.end)
+    }
 }

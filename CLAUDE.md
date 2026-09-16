@@ -33,7 +33,6 @@ Communicate with the user in Russian. UI strings are Russian, in `strings.xml`.
 ./gradlew :app:testDebugUnitTest          # JVM unit tests (Robolectric + in-memory Room)
 ./gradlew :app:testDebugUnitTest --tests 'dev.boar.checktime.domain.TimelineRepositoryTest'
 ./gradlew :app:testDebugUnitTest --tests '*TimelineRepositoryTest.allocate*'   # single test
-./gradlew :app:connectedDebugAndroidTest  # instrumented tests on the phone
 ./gradlew :app:lint
 adb shell monkey -p dev.boar.checktime -c android.intent.category.LAUNCHER 1   # launch the app
 ```
@@ -48,11 +47,11 @@ in the `Application` class — no Hilt.
   `SettingsRepository` (DataStore: only `intervalMinutes`, `snoozeMinutes`, `stepMinutes`).
 - `domain/` — `TimelineRepository` is the **only** code that writes segments or
   moves `accountedUntil`. It owns the invariants: segments never overlap and
-  cover `[trackingStart, accountedUntil)` with no gaps. Operations (`allocate`,
-  `changeCategory`, `moveBoundary`, `split`, `merge`) are single Room
-  transactions; `allocate` re-checks `accountedUntil` inside the transaction
-  so a stale popup cannot double-write. Pure stats/day-slicing functions live
-  here too.
+  cover `[trackingStart, accountedUntil)` with no gaps. `allocate` is a single
+  Room transaction that re-checks `accountedUntil` inside the transaction so a
+  stale popup cannot double-write. `changeCategory`, `moveBoundary`, `split`,
+  `merge` are stage-2 operations, not implemented yet. Pure stats/day-slicing
+  functions live here too.
 - `scheduler/` — `AlarmScheduler` keeps exactly one exact alarm
   (`accountedUntil + N` after a save, `now + snooze` after a postpone).
   `AlarmReceiver` posts the ongoing "Не расписано: X мин" notification, sets

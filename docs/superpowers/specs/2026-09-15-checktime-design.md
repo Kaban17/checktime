@@ -18,7 +18,7 @@ Android-приложение для учёта времени. Каждые N м
 |------------|--------------------------------------------------------|
 | `Group`    | `id, name, color, sortOrder`                           |
 | `Category` | `id, groupId, name, color, sortOrder, archived`        |
-| `Segment`  | `id, start, end, categoryId` — unix-мс, UTC            |
+| `Segment`  | `id, startAt, endAt, categoryId` — unix-мс, UTC        |
 
 - Два уровня иерархии: группа («Личное», «Работа») → категория («Сон», «Спорт»).
 - Время назначается только на категорию, никогда на группу.

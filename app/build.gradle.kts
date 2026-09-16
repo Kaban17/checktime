@@ -66,6 +66,10 @@ dependencies {
     testImplementation(libs.compose.ui.test.junit4)
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 // Robolectric 4.17 на JDK 21 лезет в jdk.internal.access — без этого падает
 // "Failed to interact with raw FileDescriptor internals".
 tasks.withType<Test>().configureEach {
