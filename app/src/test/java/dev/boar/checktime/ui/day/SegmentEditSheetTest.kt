@@ -1,6 +1,8 @@
 package dev.boar.checktime.ui.day
 
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -90,6 +92,16 @@ class SegmentEditSheetTest {
             )
         }
         compose.onNodeWithText("Разбить").assertIsNotEnabled()
+    }
+
+    @Test fun moveStartClampsAtPreviousStartPlusMinute() {
+        compose.setContent {
+            SegmentEditContent(state(), onChangeCategory = {}, onSplit = {}, onMoveStart = {}, onMoveEnd = {}, onMergePrevious = {}, onMergeNext = {}, zone = zone)
+        }
+        compose.onNodeWithText("Сдвинуть начало").performClick()
+        repeat(20) { compose.onNodeWithTag("time-dec").performClick() }
+        compose.onNodeWithTag("time-value").assertTextEquals("08:01")
+        compose.onNodeWithText("Готово").assertIsEnabled()
     }
 
     @Test fun mergeNextCallsBack() {

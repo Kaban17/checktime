@@ -22,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.boar.checktime.R
 import dev.boar.checktime.domain.TimeMath
@@ -34,11 +36,13 @@ import java.time.ZoneId
  * Если ничего не попало в диапазон, возвращаем вариант на дате current — UI подсветит ошибку.
  */
 fun pickerToEpoch(current: Long, hour: Int, minute: Int, range: LongRange, zone: ZoneId): Long {
-    val date = Instant.ofEpochMilli(current).atZone(zone).toLocalDate()
-    val sameDay = date.atTime(LocalTime.of(hour, minute)).atZone(zone).toInstant().toEpochMilli()
+    val local = Instant.ofEpochMilli(current).atZone(zone)
+    val time = LocalTime.of(hour, minute, local.second, local.nano)
+    val date = local.toLocalDate()
+    val sameDay = date.atTime(time).atZone(zone).toInstant().toEpochMilli()
     if (sameDay in range) return sameDay
     for (shift in listOf(1L, -1L)) {
-        val candidate = date.plusDays(shift).atTime(LocalTime.of(hour, minute)).atZone(zone).toInstant().toEpochMilli()
+        val candidate = date.plusDays(shift).atTime(time).atZone(zone).toInstant().toEpochMilli()
         if (candidate in range) return candidate
     }
     return sameDay
@@ -59,16 +63,19 @@ fun TimeStepperField(
     val step = stepMinutes * TimeMath.MINUTE_MS
     val inRange = value in range
     val empty = range.first > range.last
+    val minusLabel = stringResource(R.string.time_step_minus)
+    val plusLabel = stringResource(R.string.time_step_plus)
+    val pickLabel = stringResource(R.string.time_pick)
 
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         RepeatButton(
             onClick = { if (!empty) onValueChange((value - step).coerceIn(range.first, range.last)) },
-            modifier = Modifier.testTag("time-dec"),
+            modifier = Modifier.testTag("time-dec").semantics { contentDescription = minusLabel },
         ) { Text("−", style = MaterialTheme.typography.titleLarge) }
         Text(
             formatTime(value, zone),
             modifier = Modifier
-                .clickable { showPicker = true }
+                .clickable(onClickLabel = pickLabel) { showPicker = true }
                 .padding(horizontal = 16.dp, vertical = 8.dp)
                 .testTag("time-value"),
             style = MaterialTheme.typography.headlineSmall,
@@ -77,7 +84,7 @@ fun TimeStepperField(
         RepeatButton(
             onClick = { if (!empty) onValueChange((value + step).coerceIn(range.first, range.last)) },
             modifier = Modifier.testTag("time-inc"),
-        ) { Icon(Icons.Default.Add, contentDescription = null) }
+        ) { Icon(Icons.Default.Add, contentDescription = plusLabel) }
     }
 
     if (showPicker) {

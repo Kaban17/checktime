@@ -45,15 +45,17 @@ class SettingsViewModelTest {
     @Test fun startTrackingSetsStateAndArmsFirstAlarm() = runTest {
         vm.startTracking().join()
         val s = vm.state.first { it?.tracking != null }!!
-        assertEquals(now, s.tracking!!.accountedUntil)
-        assertEquals(now + 30 * MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
+        val aligned = now - now % MINUTE_MS
+        assertEquals(aligned, s.tracking!!.accountedUntil)
+        assertEquals(aligned + 30 * MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
     }
 
     @Test fun changingIntervalReschedulesAlarm() = runTest {
         vm.startTracking().join()
         vm.setInterval(15).join()
         assertEquals(15, vm.state.first { it?.settings?.intervalMinutes == 15 }!!.settings.intervalMinutes)
-        assertEquals(now + 15 * MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
+        val aligned = now - now % MINUTE_MS
+        assertEquals(aligned + 15 * MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
     }
 
     @Test fun changingIntervalBeforeStartDoesNotArm() = runTest {

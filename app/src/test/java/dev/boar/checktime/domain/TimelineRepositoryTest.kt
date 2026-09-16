@@ -48,19 +48,25 @@ class TimelineRepositoryTest {
         assertNull(repo.trackingState())
         repo.startTracking(now = 1_000)
         repo.startTracking(now = 9_000)
-        assertEquals(1_000L, repo.trackingState()!!.trackingStart)
-        assertEquals(1_000L, repo.trackingState()!!.accountedUntil)
+        assertEquals(0L, repo.trackingState()!!.trackingStart)
+        assertEquals(0L, repo.trackingState()!!.accountedUntil)
+    }
+
+    @Test fun startTrackingAlignsToMinute() = runTest {
+        repo.startTracking(now = 90_500)
+        assertEquals(60_000L, repo.trackingState()!!.accountedUntil)
+        assertEquals(60_000L, repo.trackingState()!!.trackingStart)
     }
 
     @Test fun allocateWritesOrderedSegmentsAndAdvances() = runTest {
-        repo.startTracking(now = 1_000)
-        val result = repo.allocate(expectedAccountedUntil = 1_000, allocations = listOf(Allocation(work, 20), Allocation(rest, 10)))
+        repo.startTracking(now = 0)
+        val result = repo.allocate(expectedAccountedUntil = 0, allocations = listOf(Allocation(work, 20), Allocation(rest, 10)))
         assertEquals(AllocateResult.Saved, result)
 
         val segs = db.segmentDao().all()
         assertEquals(listOf(work, rest), segs.map { it.categoryId })
-        assertContiguous(segs, from = 1_000, to = 1_000 + 30 * m)
-        assertEquals(1_000 + 30 * m, repo.trackingState()!!.accountedUntil)
+        assertContiguous(segs, from = 0, to = 30 * m)
+        assertEquals(30 * m, repo.trackingState()!!.accountedUntil)
     }
 
     @Test fun consecutiveAllocationsStayContiguous() = runTest {
@@ -171,6 +177,15 @@ class TimelineRepositoryTest {
         val segs = threeSegments()
         assertEquals(EditResult.Rejected, repo.merge(segs[0].id, segs[2].id))
         assertEquals(3, db.segmentDao().all().size)
+    }
+
+    @Test fun editsNeverMoveAccountedUntil() = runTest {
+        val segs = threeSegments()
+        assertEquals(EditResult.Done, repo.merge(keepId = segs[2].id, otherId = segs[1].id))
+        assertEquals(EditResult.Done, repo.split(segs[0].id, 10 * m))
+        assertEquals(75 * m, repo.trackingState()!!.accountedUntil)
+        assertEquals(AllocateResult.Saved, repo.allocate(75 * m, listOf(Allocation(work, 5))))
+        assertContiguous(db.segmentDao().all(), 0, 80 * m)
     }
 
     @Test fun neighboursAreAdjacentOnly() = runTest {

@@ -1,5 +1,6 @@
 package dev.boar.checktime.ui.day
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -68,7 +69,7 @@ data class EditorState(
 @OptIn(ExperimentalCoroutinesApi::class)
 class DayViewModel(
     private val container: AppContainer,
-    private val zone: ZoneId = ZoneId.systemDefault(),
+    val zone: ZoneId = ZoneId.systemDefault(),
 ) : ViewModel() {
     private val date = MutableStateFlow(currentDate())
 
@@ -148,7 +149,10 @@ class DayViewModel(
         editorJob?.cancel()
         _editor.value = null
         viewModelScope.launch {
-            if (action(e) == EditResult.Rejected) _messages.send(R.string.edit_rejected)
+            val result = runCatching { action(e) }
+                .onFailure { Log.w("DayViewModel", "edit action failed", it) }
+                .getOrDefault(EditResult.Rejected)
+            if (result == EditResult.Rejected) _messages.send(R.string.edit_rejected)
         }
     }
 

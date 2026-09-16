@@ -30,9 +30,11 @@ class TimelineRepository(private val db: AppDatabase) {
 
     suspend fun trackingState(): TrackingState? = stateDao.get()
 
+    /** Начинает учёт; граница учёта всегда на минутной сетке — [now] выравнивается вниз до минуты. */
     suspend fun startTracking(now: Long) = db.withTransaction {
         if (stateDao.get() == null) {
-            stateDao.upsert(TrackingState(trackingStart = now, accountedUntil = now))
+            val start = now - now % TimeMath.MINUTE_MS
+            stateDao.upsert(TrackingState(trackingStart = start, accountedUntil = start))
         }
     }
 
@@ -61,10 +63,10 @@ class TimelineRepository(private val db: AppDatabase) {
     suspend fun segment(id: Long): Segment? = segmentDao.byId(id)
 
     /** Смежные соседи (предыдущий, следующий) или null, если границы не с кем делить. */
-    suspend fun neighbours(segment: Segment): Pair<Segment?, Segment?> {
+    suspend fun neighbours(segment: Segment): Pair<Segment?, Segment?> = db.withTransaction {
         val prev = segmentDao.previousOf(segment.startAt)?.takeIf { it.endAt == segment.startAt }
         val next = segmentDao.nextOf(segment.endAt)?.takeIf { it.startAt == segment.endAt }
-        return prev to next
+        prev to next
     }
 
     suspend fun changeCategory(segmentId: Long, categoryId: Long): EditResult = db.withTransaction {

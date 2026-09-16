@@ -52,6 +52,12 @@ class TimeStepperFieldTest {
         assertEquals(at(day, 9, 0), pickerToEpoch(current, 9, 0, range, zone))
     }
 
+    @Test fun pickerKeepsSubMinuteOffset() {
+        val current = at(day, 14, 0) + 27_000 + 123
+        val range = at(day, 0, 0)..at(day, 23, 59)
+        assertEquals(at(day, 15, 30) + 27_123, pickerToEpoch(current, 15, 30, range, zone))
+    }
+
     @Test fun stepButtonsMoveByStepAndClamp() {
         val range = at(day, 12, 0)..at(day, 12, 12)
         var value by mutableStateOf(at(day, 12, 5))

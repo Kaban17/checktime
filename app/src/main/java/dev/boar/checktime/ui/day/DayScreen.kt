@@ -83,6 +83,7 @@ fun DayRoute(viewModel: DayViewModel) {
             onMoveEnd = viewModel::moveEnd,
             onMergePrevious = viewModel::mergeWithPrevious,
             onMergeNext = viewModel::mergeWithNext,
+            zone = viewModel.zone,
         )
     }
 }

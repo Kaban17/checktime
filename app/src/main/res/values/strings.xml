@@ -59,6 +59,9 @@
     <string name="edit_move_end">Сдвинуть конец</string>
     <string name="edit_merge_previous">Слить с предыдущей</string>
     <string name="edit_merge_next">Слить со следующей</string>
+    <string name="time_step_minus">Минус шаг</string>
+    <string name="time_step_plus">Плюс шаг</string>
+    <string name="time_pick">Выбрать время</string>
     <string name="tab_day">День</string>
     <string name="tab_settings">Настройки</string>
 </resources>
