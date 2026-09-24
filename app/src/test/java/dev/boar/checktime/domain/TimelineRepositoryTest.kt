@@ -20,6 +20,7 @@ class TimelineRepositoryTest {
     private lateinit var repo: TimelineRepository
     private var work = 0L
     private var rest = 0L
+    private var study = 0L
     private val m = TimeMath.MINUTE_MS
 
     @Before
@@ -29,6 +30,7 @@ class TimelineRepositoryTest {
         val gid = db.categoryDao().insertGroup(Group(name = "g", color = 0, sortOrder = 0))
         work = db.categoryDao().insertCategory(Category(groupId = gid, name = "Работа", color = 0, sortOrder = 0))
         rest = db.categoryDao().insertCategory(Category(groupId = gid, name = "Отдых", color = 0, sortOrder = 1))
+        study = db.categoryDao().insertCategory(Category(groupId = gid, name = "Учёба", color = 0, sortOrder = 2))
     }
 
     @After
@@ -103,16 +105,13 @@ class TimelineRepositoryTest {
     }
 
     @Test fun changeCategoryRewritesOnlyThatSegment() = runTest {
-        // Соседи одной категории после смены склеиваются (см. changeCategoryCoalescesWithNeighbours),
-        // поэтому здесь middle меняется на категорию, отличную от соседей.
-        repo.startTracking(now = 0)
-        repo.allocate(0, listOf(Allocation(work, 30), Allocation(rest, 15)))
-        val segs = db.segmentDao().all()
-        assertEquals(EditResult.Done, repo.changeCategory(segs[1].id, work))
+        val segs = threeSegments() // work 0–30, rest 30–45, work 45–75
+        // Новая категория не совпадает ни с одним соседом — склейки быть не должно.
+        assertEquals(EditResult.Done, repo.changeCategory(segs[1].id, study))
         val after = db.segmentDao().all()
-        assertEquals(1, after.size)
-        assertEquals(work, after[0].categoryId)
-        assertContiguous(after, 0, 45 * m)
+        assertEquals(listOf(work, study, work), after.map { it.categoryId })
+        assertEquals(listOf(0L, 30 * m, 45 * m), after.map { it.startAt })
+        assertContiguous(after, 0, 75 * m)
     }
 
     @Test fun changeCategoryCoalescesWithNeighbours() = runTest {
