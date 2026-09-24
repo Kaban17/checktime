@@ -17,11 +17,13 @@ import dev.boar.checktime.domain.periodOf
 import dev.boar.checktime.domain.range
 import dev.boar.checktime.domain.shift
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -53,10 +55,19 @@ class StatsViewModel(
             .map { sel to clipSegments(it, range.start, range.end) }
     }
 
+    /** Раз в 30 с пересчитываем «сегодня», не трогая базу. */
+    private val ticker = flow {
+        while (true) {
+            emit(Unit)
+            delay(30_000)
+        }
+    }
+
     val state: StateFlow<StatsUiState> = combine(
         periodSegments,
         container.categories.observeTree(),
-    ) { (sel, segments), tree ->
+        ticker,
+    ) { (sel, segments), tree, _ ->
         StatsUiState(
             period = sel.period,
             kind = sel.kind,
