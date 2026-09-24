@@ -68,8 +68,10 @@ in the `Application` class — no Hilt.
   exempts background activity starts — then stops itself. The popup never
   shows itself on the alarm and never wakes the screen. `BootReceiver`
   re-arms the alarm.
-- `ui/` — Compose screens + ViewModels. Bottom nav: Day · Settings (Stats is stage 3)
+- `ui/` — Compose screens + ViewModels. Bottom nav: Day · Stats · Settings
   (settings includes the group/category editor and the permissions checklist).
+  Stats is read-only: `StatsViewModel` plus the pure `aggregate`/`periodOf`
+  functions in `domain`.
   `AllocationActivity` is a separate `singleTask` activity, not part of the
   nav graph; back gesture = postpone. Tapping a record on the Day screen opens
   `SegmentEditSheet`.

@@ -4,6 +4,7 @@ import android.app.NotificationManager
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
@@ -26,10 +27,18 @@ class MainActivityTest {
 
     @Test fun bottomBarSwitchesBetweenDayAndSettings() {
         waitForText("Учёт не начат — откройте «Настройки»")
-        compose.onNodeWithText("Настройки").performClick()
+        compose.onNodeWithTag("nav-settings").performClick()
         waitForText("Начать учёт") // экран настроек ждёт первого значения из DataStore/Room
         compose.onNodeWithText("Начать учёт").assertIsDisplayed()
-        compose.onNodeWithText("День").performClick()
+        compose.onNodeWithTag("nav-day").performClick()
+        waitForText("Учёт не начат — откройте «Настройки»")
+    }
+
+    @Test fun statsTabIsReachable() {
+        waitForText("Учёт не начат — откройте «Настройки»")
+        compose.onNodeWithTag("nav-stats").performClick()
+        waitForText("За этот период записей нет")
+        compose.onNodeWithTag("nav-day").performClick()
         waitForText("Учёт не начат — откройте «Настройки»")
     }
 
