@@ -42,6 +42,16 @@
     <string name="categories_unarchive">Вернуть</string>
     <string name="categories_delete_has_segments">У категории есть записи — её можно только архивировать</string>
     <string name="categories_delete_group_not_empty">Сначала удалите категории группы</string>
+    <string name="tab_stats">Статистика</string>
+    <string name="stats_day">День</string>
+    <string name="stats_week">Неделя</string>
+    <string name="stats_month">Месяц</string>
+    <string name="stats_custom">Период</string>
+    <string name="stats_previous">Предыдущий период</string>
+    <string name="stats_next">Следующий период</string>
+    <string name="stats_total">Всего: %1$s</string>
+    <string name="stats_by_category">По категориям</string>
+    <string name="stats_empty">За этот период записей нет</string>
     <string name="dialog_save">Сохранить</string>
     <string name="dialog_cancel">Отмена</string>
     <string name="dialog_ok">ОК</string>
