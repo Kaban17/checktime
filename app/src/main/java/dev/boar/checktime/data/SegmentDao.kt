@@ -19,7 +19,7 @@ interface SegmentDao {
     @Query("SELECT * FROM segments ORDER BY startAt")
     suspend fun all(): List<Segment>
 
-    @Insert suspend fun insertAll(segments: List<Segment>)
+    @Insert suspend fun insertAll(segments: List<Segment>): List<Long>
 
     @Query("SELECT * FROM segments WHERE id = :id")
     suspend fun byId(id: Long): Segment?

@@ -53,8 +53,13 @@ class TimelineRepository(private val db: AppDatabase) {
                 val end = cursor + a.minutes * TimeMath.MINUTE_MS
                 Segment(startAt = cursor, endAt = end, categoryId = a.categoryId).also { cursor = end }
             }
-            segmentDao.insertAll(segments)
+            val ids = segmentDao.insertAll(segments)
             stateDao.upsert(state.copy(accountedUntil = cursor))
+            // Подряд идущие записи одной категории не должны плодить строки в «Дне»:
+            // склеиваем первую записанную с предыдущей, если категория совпала.
+            // Внутри одного распределения категории уникальны (AllocationDraft.allocations()),
+            // поэтому достаточно стыка со старыми данными.
+            ids.firstOrNull()?.let { id -> segmentDao.byId(id)?.let { coalesce(it) } }
             AllocateResult.Saved
         }
 
@@ -71,7 +76,9 @@ class TimelineRepository(private val db: AppDatabase) {
 
     suspend fun changeCategory(segmentId: Long, categoryId: Long): EditResult = db.withTransaction {
         val s = segmentDao.byId(segmentId) ?: return@withTransaction EditResult.Rejected
-        segmentDao.update(s.copy(categoryId = categoryId))
+        val updated = s.copy(categoryId = categoryId)
+        segmentDao.update(updated)
+        coalesce(updated)
         EditResult.Done
     }
 
@@ -104,5 +111,49 @@ class TimelineRepository(private val db: AppDatabase) {
         segmentDao.delete(o)
         segmentDao.update(k.copy(startAt = minOf(k.startAt, o.startAt), endAt = maxOf(k.endAt, o.endAt)))
         EditResult.Done
+    }
+
+    /**
+     * Склеивает [segment] со смежными соседями той же категории.
+     * Вызывать только внутри транзакции. Возвращает итоговую запись.
+     */
+    private suspend fun coalesce(segment: Segment): Segment {
+        var s = segment
+        segmentDao.previousOf(s.startAt)
+            ?.takeIf { it.endAt == s.startAt && it.categoryId == s.categoryId }
+            ?.let { prev ->
+                segmentDao.delete(prev)
+                s = s.copy(startAt = prev.startAt)
+                segmentDao.update(s)
+            }
+        segmentDao.nextOf(s.endAt)
+            ?.takeIf { it.startAt == s.endAt && it.categoryId == s.categoryId }
+            ?.let { next ->
+                segmentDao.delete(next)
+                s = s.copy(endAt = next.endAt)
+                segmentDao.update(s)
+            }
+        return s
+    }
+
+    /**
+     * Склеивает все подряд идущие записи одной категории (накопились до введения склейки).
+     * Идемпотентно; вызывается один раз при старте приложения. Возвращает число склеенных записей.
+     */
+    suspend fun coalesceAll(): Int = db.withTransaction {
+        val all = segmentDao.all()
+        var merged = 0
+        var current: Segment? = null
+        for (s in all) {
+            val c = current
+            if (c != null && c.endAt == s.startAt && c.categoryId == s.categoryId) {
+                segmentDao.delete(s)
+                current = c.copy(endAt = s.endAt).also { segmentDao.update(it) }
+                merged++
+            } else {
+                current = s
+            }
+        }
+        merged
     }
 }

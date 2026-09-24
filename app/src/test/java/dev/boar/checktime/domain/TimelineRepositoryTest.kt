@@ -103,11 +103,69 @@ class TimelineRepositoryTest {
     }
 
     @Test fun changeCategoryRewritesOnlyThatSegment() = runTest {
-        val segs = threeSegments()
+        // Соседи одной категории после смены склеиваются (см. changeCategoryCoalescesWithNeighbours),
+        // поэтому здесь middle меняется на категорию, отличную от соседей.
+        repo.startTracking(now = 0)
+        repo.allocate(0, listOf(Allocation(work, 30), Allocation(rest, 15)))
+        val segs = db.segmentDao().all()
         assertEquals(EditResult.Done, repo.changeCategory(segs[1].id, work))
         val after = db.segmentDao().all()
-        assertEquals(listOf(work, work, work), after.map { it.categoryId })
-        assertContiguous(after, 0, 75 * m)
+        assertEquals(1, after.size)
+        assertEquals(work, after[0].categoryId)
+        assertContiguous(after, 0, 45 * m)
+    }
+
+    @Test fun changeCategoryCoalescesWithNeighbours() = runTest {
+        val segs = threeSegments() // work 0–30, rest 30–45, work 45–75
+        assertEquals(EditResult.Done, repo.changeCategory(segs[1].id, work))
+        val all = db.segmentDao().all()
+        assertEquals(1, all.size)
+        assertEquals(work, all[0].categoryId)
+        assertContiguous(all, 0, 75 * m)
+    }
+
+    @Test fun allocateExtendsPreviousSegmentOfSameCategory() = runTest {
+        repo.startTracking(now = 0)
+        repo.allocate(0, listOf(Allocation(work, 30)))
+        repo.allocate(30 * m, listOf(Allocation(work, 20)))
+        val all = db.segmentDao().all()
+        assertEquals(1, all.size)
+        assertEquals(0L, all[0].startAt)
+        assertEquals(50 * m, all[0].endAt)
+        assertContiguous(all, 0, 50 * m)
+    }
+
+    @Test fun allocateKeepsSeparateSegmentForDifferentCategory() = runTest {
+        repo.startTracking(now = 0)
+        repo.allocate(0, listOf(Allocation(work, 30)))
+        repo.allocate(30 * m, listOf(Allocation(rest, 20)))
+        assertEquals(listOf(work, rest), db.segmentDao().all().map { it.categoryId })
+    }
+
+    @Test fun splitDoesNotCoalesceBack() = runTest {
+        val segs = threeSegments()
+        assertEquals(EditResult.Done, repo.split(segs[0].id, 10 * m))
+        assertEquals(4, db.segmentDao().all().size)
+    }
+
+    @Test fun coalesceAllMergesExistingRuns() = runTest {
+        repo.startTracking(now = 0)
+        // «старые» данные пишем напрямую через DAO, минуя склейку
+        db.segmentDao().insertAll(
+            listOf(
+                Segment(startAt = 0, endAt = 10 * m, categoryId = work),
+                Segment(startAt = 10 * m, endAt = 20 * m, categoryId = work),
+                Segment(startAt = 20 * m, endAt = 30 * m, categoryId = rest),
+                Segment(startAt = 30 * m, endAt = 40 * m, categoryId = rest),
+                Segment(startAt = 40 * m, endAt = 50 * m, categoryId = work),
+            ),
+        )
+        assertEquals(2, repo.coalesceAll()) // 5 записей → 3 итоговых = 2 склейки
+        val all = db.segmentDao().all()
+        assertEquals(listOf(work, rest, work), all.map { it.categoryId })
+        assertEquals(listOf(0L, 20 * m, 40 * m), all.map { it.startAt })
+        assertContiguous(all, 0, 50 * m)
+        assertEquals(0, repo.coalesceAll()) // идемпотентно
     }
 
     @Test fun changeCategoryOfMissingSegmentIsRejected() = runTest {

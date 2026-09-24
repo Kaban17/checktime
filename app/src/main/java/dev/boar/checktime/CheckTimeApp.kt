@@ -38,7 +38,10 @@ open class CheckTimeApp : Application() {
         super.onCreate()
         container = createContainer()
         PendingNotification.createChannels(this)
-        container.applicationScope.launch { container.categories.seedDefaultsIfEmpty() }
+        container.applicationScope.launch {
+            container.categories.seedDefaultsIfEmpty()
+            container.timeline.coalesceAll()
+        }
     }
 }
 

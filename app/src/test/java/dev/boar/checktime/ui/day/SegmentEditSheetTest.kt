@@ -57,7 +57,7 @@ class SegmentEditSheetTest {
         compose.onNodeWithTag("time-value").assertExists()
         compose.onNodeWithText("09:30").assertExists()
         compose.onNodeWithTag("time-inc").performClick()
-        compose.onNodeWithText("Готово").performClick()
+        compose.onNodeWithTag("time-confirm").performClick()
         assertEquals(9 * h + 35 * MINUTE_MS, splitAt)
     }
 
@@ -69,7 +69,7 @@ class SegmentEditSheetTest {
         compose.onNodeWithText("Сдвинуть конец").performClick()
         compose.onNodeWithText("10:00").assertExists()
         compose.onNodeWithTag("time-dec").performClick()
-        compose.onNodeWithText("Готово").performClick()
+        compose.onNodeWithTag("time-confirm").performClick()
         assertEquals(10 * h - 5 * MINUTE_MS, moved)
     }
 
@@ -101,7 +101,19 @@ class SegmentEditSheetTest {
         compose.onNodeWithText("Сдвинуть начало").performClick()
         repeat(20) { compose.onNodeWithTag("time-dec").performClick() }
         compose.onNodeWithTag("time-value").assertTextEquals("08:01")
-        compose.onNodeWithText("Готово").assertIsEnabled()
+        compose.onNodeWithTag("time-confirm").assertIsEnabled()
+    }
+
+    @Test fun cancelReturnsToMenuWithoutConfirming() {
+        var splitAt = -1L
+        compose.setContent {
+            SegmentEditContent(state(), onChangeCategory = {}, onSplit = { splitAt = it }, onMoveStart = {}, onMoveEnd = {}, onMergePrevious = {}, onMergeNext = {}, zone = zone)
+        }
+        compose.onNodeWithText("Разбить").performClick()
+        compose.onNodeWithTag("time-inc").performClick()
+        compose.onNodeWithTag("time-cancel").performClick()
+        compose.onNodeWithText("Разбить").assertExists() // вернулись в меню
+        assertEquals(-1L, splitAt)                       // ничего не подтвердили
     }
 
     @Test fun mergeNextCallsBack() {

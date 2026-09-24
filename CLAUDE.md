@@ -51,7 +51,13 @@ in the `Application` class — no Hilt.
   Room transaction that re-checks `accountedUntil` inside the transaction so a
   stale popup cannot double-write. `changeCategory`, `split`, `moveBoundary`,
   `merge` are also single transactions that check adjacency/range and return
-  an `EditResult`. Pure stats/day-slicing functions live here too.
+  an `EditResult`. `allocate` and `changeCategory` coalesce the written/updated
+  segment with adjacent neighbours of the same category, so the Day screen
+  never shows consecutive rows with the same category; `split` deliberately
+  does not coalesce (otherwise you couldn't split a segment to change just
+  one half's category). `coalesceAll()` is a one-off, idempotent cleanup run
+  once at app startup to merge runs accumulated before coalescing existed.
+  Pure stats/day-slicing functions live here too.
 - `scheduler/` — `AlarmScheduler` keeps exactly one exact alarm
   (`accountedUntil + N` after a save, `now + snooze` after a postpone).
   `AlarmReceiver` posts the ongoing "Не расписано: X мин" notification, sets
