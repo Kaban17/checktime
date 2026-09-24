@@ -57,4 +57,14 @@ class StatsTest {
         assertEquals(10 * m, r.totalMillis)
         assertEquals(1, r.categories.size)
     }
+
+    @Test fun archivedCategoriesAreStillCounted() {
+        val archivedTree = listOf(
+            GroupWithCategories(personal, listOf(sleep.copy(archived = true), food)),
+            GroupWithCategories(workGroup, listOf(work)),
+        )
+        val r = aggregate(listOf(seg(0, 60, sleep.id), seg(60, 90, work.id)), archivedTree)
+        assertEquals(90 * m, r.totalMillis)
+        assertEquals(listOf("Сон", "Работа"), r.categories.map { it.category.name })
+    }
 }

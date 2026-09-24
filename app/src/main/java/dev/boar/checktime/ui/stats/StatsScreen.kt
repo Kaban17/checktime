@@ -31,8 +31,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.boar.checktime.R
@@ -78,8 +79,8 @@ fun StatsScreen(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
 ) {
-    var showPicker by remember { mutableStateOf(false) }
-    val expanded = remember { mutableStateMapOf<Long, Boolean>() }
+    var showPicker by rememberSaveable { mutableStateOf(false) }
+    var expandedIds by rememberSaveable { mutableStateOf(setOf<Long>()) }
 
     Column(Modifier.fillMaxSize()) {
         PeriodChips(state.kind, onSelectKind, onOpenPicker = { showPicker = true })
@@ -103,14 +104,19 @@ fun StatsScreen(
                 }
                 state.result.groups.forEach { group ->
                     item(key = "g${group.group.id}") {
-                        val open = expanded[group.group.id] == true
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { expanded[group.group.id] = !open },
-                        ) {
+                        val open = group.group.id in expandedIds
+                        Column(Modifier.fillMaxWidth()) {
                             Row(
-                                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        expandedIds = if (group.group.id in expandedIds) {
+                                            expandedIds - group.group.id
+                                        } else {
+                                            expandedIds + group.group.id
+                                        }
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Box(Modifier.size(12.dp).clip(CircleShape).background(Color(group.group.color)))
@@ -126,6 +132,7 @@ fun StatsScreen(
                                     Modifier.width(48.dp),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.outline,
+                                    textAlign = TextAlign.End,
                                 )
                             }
                             if (open) {
@@ -147,6 +154,7 @@ fun StatsScreen(
                                             Modifier.width(48.dp),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.outline,
+                                            textAlign = TextAlign.End,
                                         )
                                     }
                                 }

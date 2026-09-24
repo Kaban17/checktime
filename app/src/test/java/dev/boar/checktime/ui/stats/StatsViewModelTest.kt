@@ -115,4 +115,34 @@ class StatsViewModelTest {
         assertEquals(110 * MINUTE_MS, s.result.totalMillis)
         assertEquals(2, s.dayCount)
     }
+
+    @Test fun archivingCategoryDoesNotChangePeriodTotal() = runTest {
+        seed()
+        val vm = vm()
+        val before = vm.state.first { it.result.totalMillis > 0 }.result.totalMillis
+        val sleepCategory = container.categories.observeTree().first()
+            .flatMap { it.categories }.first { it.id == sleep }
+        container.categories.updateCategory(sleepCategory.copy(archived = true))
+        val after = vm.state.first { it.result.categories.any { c -> c.category.archived } }
+        assertEquals(before, after.result.totalMillis)
+    }
+
+    @Test fun segmentCrossingMidnightIsSplitBetweenDaysAndCountedOnceInWeek() = runTest {
+        // 23:00 вчера → 01:00 сегодня
+        val start = dayRange(today.minusDays(1), zone).start + 23 * 60 * MINUTE_MS
+        container.timeline.startTracking(start)
+        container.timeline.allocate(start, listOf(Allocation(sleep, 120)))
+
+        val vm = vm()
+        val todayState = vm.state.first { it.result.totalMillis > 0 }
+        assertEquals(60 * MINUTE_MS, todayState.result.totalMillis)
+
+        vm.previous()
+        val yesterdayState = vm.state.first { it.period == StatsPeriod.Day(today.minusDays(1)) }
+        assertEquals(60 * MINUTE_MS, yesterdayState.result.totalMillis)
+
+        vm.selectKind(PeriodKind.WEEK)
+        val weekState = vm.state.first { it.kind == PeriodKind.WEEK && it.result.totalMillis > 0 }
+        assertEquals(120 * MINUTE_MS, weekState.result.totalMillis)
+    }
 }
