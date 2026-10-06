@@ -11,4 +11,6 @@ class FormatTest {
     @Test fun durationZero() = assertEquals("0 мин", formatDuration(0))
     @Test fun durationFromMillisFloors() = assertEquals("1 мин", formatDurationMs(119_999))
     @Test fun timeUsesZone() = assertEquals("03:00", formatTime(0, ZoneId.of("Europe/Moscow")))
+    @Test fun dateTimeHasDayMonthYear() =
+        assertEquals("1 января 1970, 03:00", formatDateTime(0, ZoneId.of("Europe/Moscow")))
 }

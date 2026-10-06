@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Тёмный фон иконки: сектора на нём читаются как светящийся циферблат. -->
+    <color name="ic_launcher_background">#15131C</color>
+</resources>

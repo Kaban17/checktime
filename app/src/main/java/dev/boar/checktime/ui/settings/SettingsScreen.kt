@@ -45,7 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.boar.checktime.R
 import dev.boar.checktime.data.Settings
 import dev.boar.checktime.scheduler.PendingNotification
-import dev.boar.checktime.ui.common.formatTime
+import dev.boar.checktime.ui.common.formatDateTime
 
 @Composable
 fun SettingsRoute(viewModel: SettingsViewModel, onOpenCategories: () -> Unit) {
@@ -113,7 +113,7 @@ fun SettingsScreen(
                 Text(stringResource(R.string.settings_overlay_required), color = MaterialTheme.colorScheme.error)
             }
         } else {
-            Text(stringResource(R.string.settings_tracking_since, formatTime(state.tracking.trackingStart)))
+            Text(stringResource(R.string.settings_tracking_since, formatDateTime(state.tracking.trackingStart)))
             OutlinedButton(onClick = onAllocateNow, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.settings_allocate_now))
             }
