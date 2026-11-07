@@ -15,13 +15,18 @@ Communicate with the user in Russian. UI strings are Russian, in `strings.xml`.
 
 ## Toolchain
 
-- Android SDK at `~/Android/Sdk` (platform 36 + 37.2, build-tools 36.0.0); `local.properties`
-  points there and is gitignored. `/opt/android-sdk` is root-owned — don't use it.
-- Build JDK is pinned to `/usr/lib/jvm/java-21-openjdk` via `org.gradle.java.home` in
-  `gradle.properties`; no need to export `JAVA_HOME`. The system default JDK 26 does not work.
+Dev machine is macOS (Apple Silicon, Homebrew).
+
+- Android SDK at `~/Library/Android/sdk` (platform 36 + 37.2, build-tools 36.0.0), managed
+  with `sdkmanager --sdk_root=$HOME/Library/Android/sdk` from the `android-commandlinetools`
+  cask; `local.properties` points there and is gitignored. `adb` comes from the
+  `android-platform-tools` cask (`/opt/homebrew/bin/adb`).
+- Build JDK is pinned to Temurin 21 (`/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home`)
+  via `org.gradle.java.home` in `gradle.properties`; no need to export `JAVA_HOME`. The other
+  installed JDK (Temurin 25) is not supported.
 - Gradle 9.6.0 wrapper, AGP 9.4.0 with built-in Kotlin 2.2.21 (no `kotlin-android` plugin;
   `org.jetbrains.kotlin.plugin.compose` and KSP are applied). `compileSdk 37.2` because
-  Compose BOM 2026.09 requires it; `targetSdk 36`.
+  Compose BOM 2026.09 requires it; `targetSdk 36`, `minSdk 26`.
 - Robolectric on JDK 21 needs the `--add-opens/--add-exports` jvmArgs already in `app/build.gradle.kts`.
 - Test device is a physical phone on Android 16 (`adb devices`); there is no emulator.
 
@@ -67,7 +72,9 @@ in the `Application` class — no Hilt.
   granted "display over other apps" (`SYSTEM_ALERT_WINDOW`), which is what
   exempts background activity starts — then stops itself. The popup never
   shows itself on the alarm and never wakes the screen. `BootReceiver`
-  re-arms the alarm.
+  (defined in `AlarmReceiver.kt`) re-arms the alarm. `TailNotifier` reconciles
+  the notification and the alarm with the actual tail; it runs when the app is
+  opened and after each save.
 - `ui/` — Compose screens + ViewModels. Bottom nav: Day · Stats · Settings
   (settings includes the group/category editor and the permissions checklist).
   Stats is read-only: `StatsViewModel` plus the pure `aggregate`/`periodOf`
@@ -87,7 +94,7 @@ Time semantics worth remembering:
 - Allocation works in whole minutes: `total = floor((end - accountedUntil)/60s)`,
   `end` is frozen when the popup opens; the sub-minute remainder rolls into the
   next tail. A tail < 1 minute never shows a popup.
-- Segments are ordered within an allocation (written in list order) so a
+- Segments are ordered within an allocation (written in `AllocationDraft.order`) so a
   sequential "first X minutes → category" entry mode can be added later
   without changing storage.
 - Time is assigned to categories only, never to groups. Categories with
