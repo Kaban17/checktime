@@ -47,9 +47,11 @@ adb shell monkey -p dev.boar.checktime -c android.intent.category.LAUNCHER 1   #
 Single module `app`, package `dev.boar.checktime`. Manual DI via `AppContainer`
 in the `Application` class — no Hilt.
 
-- `data/` — Room entities/DAOs (`Group`, `Category`, `Segment`, and a `tracking_state`
-  table holding `trackingStart`/`accountedUntil`), `AppDatabase`,
+- `data/` — Room entities/DAOs (`Group`, `Category`, `Segment`, `WeeklyGoal`, and a
+  `tracking_state` table holding `trackingStart`/`accountedUntil`), `AppDatabase`,
   `SettingsRepository` (DataStore: only `intervalMinutes`, `snoozeMinutes`, `stepMinutes`).
+  Schema changes go through Room `autoMigrations` with exported schemas in
+  `app/schemas/`; `MigrationTest` builds the old version from its JSON (no `room-testing`).
 - `domain/` — `TimelineRepository` is the **only** code that writes segments or
   moves `accountedUntil`. It owns the invariants: segments never overlap and
   cover `[trackingStart, accountedUntil)` with no gaps. `allocate` is a single
@@ -63,6 +65,11 @@ in the `Application` class — no Hilt.
   one half's category). `coalesceAll()` is a one-off, idempotent cleanup run
   once at app startup to merge runs accumulated before coalescing existed.
   Pure stats/day-slicing functions live here too.
+  `GoalRepository` is the only writer of weekly goals. Goals are versioned, not
+  edited in place: a row applies from its `validFrom` Monday until the next row
+  for the same group/category, and `minutes = 0` removes the goal. Edits always
+  target the current week, so past weeks keep the goals they had
+  (`activeGoals`, `goalProgress` in `WeeklyGoals.kt`).
 - `scheduler/` — `AlarmScheduler` keeps exactly one exact alarm
   (`accountedUntil + N` after a save, `now + snooze` after a postpone).
   `AlarmReceiver` posts the ongoing "Не расписано: X мин" notification, sets
@@ -75,10 +82,11 @@ in the `Application` class — no Hilt.
   (defined in `AlarmReceiver.kt`) re-arms the alarm. `TailNotifier` reconciles
   the notification and the alarm with the actual tail; it runs when the app is
   opened and after each save.
-- `ui/` — Compose screens + ViewModels. Bottom nav: Day · Stats · Settings
+- `ui/` — Compose screens + ViewModels. Bottom nav: Day · Stats · Goals · Settings
   (settings includes the group/category editor and the permissions checklist).
   Stats is read-only: `StatsViewModel` plus the pure `aggregate`/`periodOf`
-  functions in `domain`.
+  functions in `domain`. Goals pages by week like Stats; only the current week
+  is editable.
   `AllocationActivity` is a separate `singleTask` activity, not part of the
   nav graph; back gesture = postpone. Tapping a record on the Day screen opens
   `SegmentEditSheet`.
@@ -98,4 +106,5 @@ Time semantics worth remembering:
   sequential "first X minutes → category" entry mode can be added later
   without changing storage.
 - Time is assigned to categories only, never to groups. Categories with
-  segments can only be archived, not deleted.
+  segments can only be archived, not deleted. Goals may target a group; its
+  progress is the sum of all its categories, archived ones included.

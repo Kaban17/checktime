@@ -40,6 +40,27 @@ data class Segment(
     val categoryId: Long,
 )
 
+/**
+ * Цель «не меньше [minutes] минут за неделю» на категорию или группу — заполнено ровно одно из двух.
+ * Действует с недели [validFrom] (epochDay понедельника) до следующей записи того же объекта;
+ * `minutes = 0` — цель снята (спека 2.1.1).
+ */
+@Entity(
+    tableName = "weekly_goals",
+    foreignKeys = [
+        ForeignKey(entity = Category::class, parentColumns = ["id"], childColumns = ["categoryId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = Group::class, parentColumns = ["id"], childColumns = ["groupId"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [Index("categoryId"), Index("groupId")],
+)
+data class WeeklyGoal(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val categoryId: Long? = null,
+    val groupId: Long? = null,
+    val minutes: Int,
+    val validFrom: Long,
+)
+
 /** Единственная строка (id = 1). Хвост нерасписанного времени = [accountedUntil, now). */
 @Entity(tableName = "tracking_state")
 data class TrackingState(

@@ -75,5 +75,16 @@
     <string name="time_step_plus">Плюс шаг</string>
     <string name="time_pick">Выбрать время</string>
     <string name="tab_day">День</string>
+    <string name="tab_goals">Цели</string>
+    <string name="goals_previous">Предыдущая неделя</string>
+    <string name="goals_next">Следующая неделя</string>
+    <string name="goals_empty">Целей на эту неделю нет</string>
+    <string name="goals_empty_hint">Нажмите «+», чтобы поставить цель на группу или категорию</string>
+    <string name="goals_progress">%1$s из %2$s</string>
+    <string name="goals_remaining">осталось %1$s</string>
+    <string name="goals_reached">Цель достигнута</string>
+    <string name="goals_add">Новая цель</string>
+    <string name="goals_minimum">Не меньше за неделю</string>
+    <string name="goals_delete">Удалить</string>
     <string name="tab_settings">Настройки</string>
 </resources>

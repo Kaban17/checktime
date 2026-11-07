@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -33,6 +34,8 @@ import dev.boar.checktime.ui.categories.CategoriesRoute
 import dev.boar.checktime.ui.categories.CategoriesViewModel
 import dev.boar.checktime.ui.day.DayRoute
 import dev.boar.checktime.ui.day.DayViewModel
+import dev.boar.checktime.ui.goals.GoalsRoute
+import dev.boar.checktime.ui.goals.GoalsViewModel
 import dev.boar.checktime.ui.settings.SettingsRoute
 import dev.boar.checktime.ui.settings.SettingsViewModel
 import dev.boar.checktime.ui.stats.StatsRoute
@@ -43,6 +46,7 @@ import kotlinx.coroutines.launch
 private object Routes {
     const val DAY = "day"
     const val STATS = "stats"
+    const val GOALS = "goals"
     const val SETTINGS = "settings"
     const val CATEGORIES = "categories"
 }
@@ -50,6 +54,7 @@ private object Routes {
 class MainActivity : ComponentActivity() {
     private val dayViewModel: DayViewModel by viewModels { DayViewModel.factory(appContainer) }
     private val statsViewModel: StatsViewModel by viewModels { StatsViewModel.factory(appContainer) }
+    private val goalsViewModel: GoalsViewModel by viewModels { GoalsViewModel.factory(appContainer) }
     private val settingsViewModel: SettingsViewModel by viewModels { SettingsViewModel.factory(appContainer) }
     private val categoriesViewModel: CategoriesViewModel by viewModels { CategoriesViewModel.factory(appContainer) }
 
@@ -58,7 +63,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CheckTimeTheme {
-                MainScreen(dayViewModel, statsViewModel, settingsViewModel, categoriesViewModel)
+                MainScreen(dayViewModel, statsViewModel, goalsViewModel, settingsViewModel, categoriesViewModel)
             }
         }
     }
@@ -74,13 +79,14 @@ class MainActivity : ComponentActivity() {
 private fun MainScreen(
     dayViewModel: DayViewModel,
     statsViewModel: StatsViewModel,
+    goalsViewModel: GoalsViewModel,
     settingsViewModel: SettingsViewModel,
     categoriesViewModel: CategoriesViewModel,
 ) {
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
-    val showBar = route == Routes.DAY || route == Routes.STATS || route == Routes.SETTINGS
+    val showBar = route == Routes.DAY || route == Routes.STATS || route == Routes.GOALS || route == Routes.SETTINGS
 
     Scaffold(
         bottomBar = {
@@ -101,6 +107,13 @@ private fun MainScreen(
                         modifier = Modifier.testTag("nav-stats"),
                     )
                     NavigationBarItem(
+                        selected = route == Routes.GOALS,
+                        onClick = { navController.switchTab(Routes.GOALS) },
+                        icon = { Icon(Icons.Default.Star, contentDescription = null) },
+                        label = { Text(stringResource(R.string.tab_goals)) },
+                        modifier = Modifier.testTag("nav-goals"),
+                    )
+                    NavigationBarItem(
                         selected = route == Routes.SETTINGS,
                         onClick = { navController.switchTab(Routes.SETTINGS) },
                         icon = { Icon(Icons.Default.Settings, contentDescription = null) },
@@ -114,6 +127,7 @@ private fun MainScreen(
         NavHost(navController, startDestination = Routes.DAY, modifier = Modifier.padding(padding)) {
             composable(Routes.DAY) { DayRoute(dayViewModel) }
             composable(Routes.STATS) { StatsRoute(statsViewModel) }
+            composable(Routes.GOALS) { GoalsRoute(goalsViewModel) }
             composable(Routes.SETTINGS) {
                 SettingsRoute(settingsViewModel, onOpenCategories = { navController.navigate(Routes.CATEGORIES) })
             }

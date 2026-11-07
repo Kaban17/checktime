@@ -7,6 +7,7 @@ import dev.boar.checktime.data.AppDatabase
 import dev.boar.checktime.data.CategoryRepository
 import dev.boar.checktime.data.SettingsRepository
 import dev.boar.checktime.data.settingsDataStore
+import dev.boar.checktime.domain.GoalRepository
 import dev.boar.checktime.domain.TimelineRepository
 import dev.boar.checktime.scheduler.AlarmScheduler
 import dev.boar.checktime.scheduler.PendingNotification
@@ -25,6 +26,7 @@ class AppContainer(
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val timeline = TimelineRepository(db)
     val categories = CategoryRepository(db.categoryDao())
+    val goals = GoalRepository(db)
     val alarms = AlarmScheduler(context)
 }
 

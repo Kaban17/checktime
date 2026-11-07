@@ -42,6 +42,14 @@ class MainActivityTest {
         waitForText("Учёт не начат — откройте «Настройки»")
     }
 
+    @Test fun goalsTabIsReachable() {
+        waitForText("Учёт не начат — откройте «Настройки»")
+        compose.onNodeWithTag("nav-goals").performClick()
+        waitForText("Целей на эту неделю нет")
+        compose.onNodeWithTag("nav-day").performClick()
+        waitForText("Учёт не начат — откройте «Настройки»")
+    }
+
     @Test fun resumeWithoutTailClearsNotification() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         PendingNotification.createChannels(context)

@@ -221,7 +221,7 @@ private fun PeriodHeader(state: StatsUiState, onPrevious: () -> Unit, onNext: ()
     }
 }
 
-private fun periodTitle(period: StatsPeriod): String = when (period) {
+internal fun periodTitle(period: StatsPeriod): String = when (period) {
     is StatsPeriod.Day -> period.date.format(dayFormatter)
     else -> "${period.firstDate().format(shortFormatter)} – ${period.lastDate().format(shortFormatter)}"
 }
