@@ -1,5 +1,7 @@
 package dev.boar.checktime.domain
 
+import kotlin.math.roundToInt
+
 data class Allocation(val categoryId: Long, val minutes: Int)
 
 /**
@@ -22,6 +24,16 @@ data class AllocationDraft(
     fun decrement(categoryId: Long) = set(categoryId, of(categoryId) - stepMinutes)
     fun assignRest(categoryId: Long) = set(categoryId, of(categoryId) + remaining)
     fun clear(categoryId: Long) = set(categoryId, 0)
+
+    /**
+     * Значение со слайдера: прилипает к шагу, но упор в доступный максимум (текущее + остаток)
+     * даёт ровно максимум, даже если он не кратен шагу.
+     */
+    fun slide(categoryId: Long, raw: Float): AllocationDraft {
+        val max = of(categoryId) + remaining
+        if (raw >= max) return set(categoryId, max)
+        return set(categoryId, (raw / stepMinutes).roundToInt() * stepMinutes)
+    }
 
     /** Значение зажимается в [0, текущее + remaining], чтобы сумма не превысила total. */
     fun set(categoryId: Long, value: Int): AllocationDraft {

@@ -9,7 +9,9 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import dev.boar.checktime.data.Category
 import dev.boar.checktime.data.Group
 import dev.boar.checktime.data.GroupWithCategories
@@ -41,8 +43,7 @@ class AllocationScreenTest {
         compose.setContent {
             AllocationScreen(
                 state = AllocationUiState.Ready(start = 0, end = initial.totalMinutes * MINUTE_MS, groups = groups, draft = draft),
-                onIncrement = { draft = draft.increment(it) },
-                onDecrement = { draft = draft.decrement(it) },
+                onSlide = { id, raw -> draft = draft.slide(id, raw) },
                 onAssignRest = { draft = draft.assignRest(it) },
                 onSave = {},
                 onPostpone = {},
@@ -54,18 +55,19 @@ class AllocationScreenTest {
         setContent(AllocationDraft(totalMinutes = 47, stepMinutes = 5, order = listOf(1L, 2L)))
         compose.onNodeWithText("Готово").assertIsNotEnabled()
         compose.onNodeWithText("Сон").performClick()
-        compose.onNodeWithTag("minutes-1").assertTextEquals("47")
+        compose.onNodeWithTag("minutes-1").assertTextEquals("47 мин")
         compose.onNodeWithText("Осталось: 0 мин").assertExists()
         compose.onNodeWithText("Готово").assertIsEnabled()
     }
 
-    @Test fun plusAndMinusChangeByStep() {
+    @Test fun sliderSnapsToStepAndStopsAtRemaining() {
         setContent(AllocationDraft(totalMinutes = 47, stepMinutes = 5, order = listOf(1L, 2L)))
-        compose.onNodeWithTag("inc-2").performClick()
-        compose.onNodeWithTag("inc-2").performClick()
-        compose.onNodeWithTag("minutes-2").assertTextEquals("10")
+        compose.onNodeWithTag("slider-2").performSemanticsAction(SemanticsActions.SetProgress) { it(11.6f) }
+        compose.onNodeWithTag("minutes-2").assertTextEquals("10 мин")
         compose.onNodeWithText("Осталось: 37 мин").assertExists()
-        compose.onNodeWithTag("dec-2").performClick()
-        compose.onNodeWithTag("minutes-2").assertTextEquals("5")
+        // Шкала — весь хвост, но больше остатка взять нельзя: упор даёт ровно 37.
+        compose.onNodeWithTag("slider-1").performSemanticsAction(SemanticsActions.SetProgress) { it(47f) }
+        compose.onNodeWithTag("minutes-1").assertTextEquals("37 мин")
+        compose.onNodeWithText("Готово").assertIsEnabled()
     }
 }

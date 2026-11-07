@@ -61,8 +61,7 @@ fun AllocationRoute(viewModel: AllocationViewModel, onFinished: () -> Unit) {
 
     AllocationScreen(
         state = state,
-        onIncrement = { id -> viewModel.edit { it.increment(id) } },
-        onDecrement = { id -> viewModel.edit { it.decrement(id) } },
+        onSlide = { id, raw -> viewModel.edit { it.slide(id, raw) } },
         onAssignRest = { id -> viewModel.edit { it.assignRest(id) } },
         onSave = viewModel::save,
         onPostpone = viewModel::postpone,

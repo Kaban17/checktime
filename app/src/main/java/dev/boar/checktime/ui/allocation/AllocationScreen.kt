@@ -10,16 +10,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -32,20 +30,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.boar.checktime.R
 import dev.boar.checktime.data.Category
 import dev.boar.checktime.data.GroupWithCategories
-import dev.boar.checktime.ui.common.RepeatButton
+import dev.boar.checktime.ui.common.CompactSlider
+import dev.boar.checktime.ui.common.edgeSafeInsets
 import dev.boar.checktime.ui.common.formatDuration
 import dev.boar.checktime.ui.common.formatTime
 
 @Composable
 fun AllocationScreen(
     state: AllocationUiState,
-    onIncrement: (Long) -> Unit,
-    onDecrement: (Long) -> Unit,
+    onSlide: (Long, Float) -> Unit,
     onAssignRest: (Long) -> Unit,
     onSave: () -> Unit,
     onPostpone: () -> Unit,
@@ -55,7 +52,7 @@ fun AllocationScreen(
             when (state) {
                 AllocationUiState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 AllocationUiState.Empty -> Text(stringResource(R.string.allocation_empty), Modifier.align(Alignment.Center))
-                is AllocationUiState.Ready -> ReadyContent(state, onIncrement, onDecrement, onAssignRest, onSave, onPostpone)
+                is AllocationUiState.Ready -> ReadyContent(state, onSlide, onAssignRest, onSave, onPostpone)
             }
         }
     }
@@ -64,8 +61,7 @@ fun AllocationScreen(
 @Composable
 private fun ReadyContent(
     state: AllocationUiState.Ready,
-    onIncrement: (Long) -> Unit,
-    onDecrement: (Long) -> Unit,
+    onSlide: (Long, Float) -> Unit,
     onAssignRest: (Long) -> Unit,
     onSave: () -> Unit,
     onPostpone: () -> Unit,
@@ -104,7 +100,7 @@ private fun ReadyContent(
                         )
                     }
                     items(g.categories, key = { "c${it.id}" }) { c ->
-                        CategoryRow(c, draft.of(c.id), onIncrement, onDecrement, onAssignRest)
+                        CategoryRow(c, draft.of(c.id), draft.totalMinutes, onSlide, onAssignRest)
                     }
                 }
             }
@@ -127,36 +123,38 @@ private fun ReadyContent(
 private fun CategoryRow(
     category: Category,
     minutes: Int,
-    onIncrement: (Long) -> Unit,
-    onDecrement: (Long) -> Unit,
+    totalMinutes: Int,
+    onSlide: (Long, Float) -> Unit,
     onAssignRest: (Long) -> Unit,
 ) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.size(12.dp).clip(CircleShape).background(Color(category.color)))
-        Spacer(Modifier.width(12.dp))
-        // Тап по названию — отдать категории весь остаток.
-        Text(
-            category.name,
-            modifier = Modifier
-                .weight(1f)
-                .clickable { onAssignRest(category.id) }
-                .padding(vertical = 12.dp),
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        RepeatButton(onClick = { onDecrement(category.id) }, modifier = Modifier.testTag("dec-${category.id}")) {
-            Text("−", style = MaterialTheme.typography.titleLarge)
+    val color = Color(category.color)
+    Column(Modifier.fillMaxWidth().windowInsetsPadding(edgeSafeInsets())) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(12.dp).clip(CircleShape).background(color))
+            Spacer(Modifier.width(12.dp))
+            // Тап по названию — отдать категории весь остаток.
+            Text(
+                category.name,
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onAssignRest(category.id) }
+                    .padding(top = 8.dp),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                formatDuration(minutes),
+                modifier = Modifier.padding(top = 8.dp).testTag("minutes-${category.id}"),
+                fontWeight = if (minutes > 0) FontWeight.Bold else FontWeight.Normal,
+                color = if (minutes > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
+            )
         }
-        Text(
-            minutes.toString(),
-            modifier = Modifier.width(48.dp).testTag("minutes-${category.id}"),
-            textAlign = TextAlign.Center,
-            fontWeight = if (minutes > 0) FontWeight.Bold else FontWeight.Normal,
+        // Шкала — весь хвост, чтобы ползунки разных категорий были сравнимы; упор — в остаток (AllocationDraft.slide).
+        CompactSlider(
+            value = minutes.toFloat(),
+            onValueChange = { onSlide(category.id, it) },
+            valueRange = 0f..totalMinutes.toFloat(),
+            color = color,
+            modifier = Modifier.testTag("slider-${category.id}"),
         )
-        RepeatButton(onClick = { onIncrement(category.id) }, modifier = Modifier.testTag("inc-${category.id}")) {
-            Icon(Icons.Default.Add, contentDescription = null)
-        }
     }
 }

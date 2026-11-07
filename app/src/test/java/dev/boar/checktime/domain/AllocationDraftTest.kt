@@ -60,4 +60,16 @@ class AllocationDraftTest {
     @Test fun zeroTotalIsNeverComplete() {
         assertFalse(AllocationDraft(totalMinutes = 0, stepMinutes = 5, order = listOf(1L)).isComplete)
     }
+
+    @Test fun slideSnapsToStep() {
+        assertEquals(10, draft.slide(10L, 11.6f).of(10L))
+        assertEquals(0, draft.slide(10L, 2.4f).of(10L))
+    }
+
+    @Test fun slideStopsAtRemainingExactly() {
+        val d = draft.slide(20L, 10f).slide(10L, 47f) // 47 - 10 = 37, не кратно шагу
+        assertEquals(37, d.of(10L))
+        assertTrue(d.isComplete)
+        assertEquals(35, d.slide(10L, 36f).of(10L)) // ниже упора — снова по сетке
+    }
 }

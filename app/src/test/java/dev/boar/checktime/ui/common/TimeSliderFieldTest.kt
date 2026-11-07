@@ -6,7 +6,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.performSemanticsAction
 import dev.boar.checktime.domain.TimeMath.MINUTE_MS
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -20,7 +22,7 @@ import java.time.ZoneId
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-class TimeStepperFieldTest {
+class TimeSliderFieldTest {
     @get:Rule val compose = createComposeRule()
 
     private val zone = ZoneId.of("Europe/Moscow")
@@ -58,34 +60,45 @@ class TimeStepperFieldTest {
         assertEquals(at(day, 15, 30) + 27_123, pickerToEpoch(current, 15, 30, range, zone))
     }
 
-    @Test fun stepButtonsMoveByStepAndClamp() {
+    @Test fun snapFollowsLocalClockGrid() {
+        val range = at(day, 12, 1)..at(day, 13, 58)
+        assertEquals(at(day, 12, 35), snapTime(at(day, 12, 33), range, 5, zone))
+        assertEquals(at(day, 12, 30), snapTime(at(day, 12, 32) + 29_000, range, 5, zone))
+        // Сетка по местным часам, а не по UTC: в Индии смещение +5:30, 15-минутная сетка всё равно :00/:15/…
+        val india = ZoneId.of("Asia/Kolkata")
+        val r = day.atTime(12, 0).atZone(india).toInstant().toEpochMilli()
+        assertEquals(r + 15 * MINUTE_MS, snapTime(r + 13 * MINUTE_MS, r..(r + 60 * MINUTE_MS), 15, india))
+    }
+
+    @Test fun snapReachesOffGridEdgesExactly() {
+        val range = at(day, 12, 1)..at(day, 13, 58)
+        assertEquals(at(day, 12, 1), snapTime(at(day, 11, 0), range, 5, zone))
+        assertEquals(at(day, 13, 58), snapTime(at(day, 13, 58), range, 5, zone))
+        assertEquals(at(day, 12, 1), snapTime(at(day, 12, 1) + 1, range, 5, zone)) // 12:00 вне диапазона → зажим
+    }
+
+    @Test fun sliderSnapsToStepAndReachesEnd() {
         val range = at(day, 12, 0)..at(day, 12, 12)
         var value by mutableStateOf(at(day, 12, 5))
         compose.setContent {
-            TimeStepperField(value = value, range = range, stepMinutes = 5, onValueChange = { value = it }, zone = zone)
+            TimeSliderField(value = value, range = range, stepMinutes = 5, onValueChange = { value = it }, zone = zone)
         }
         compose.onNodeWithTag("time-value").assertTextEquals("12:05")
-        compose.onNodeWithTag("time-inc").performClick()
+        slider().performSemanticsAction(SemanticsActions.SetProgress) { it(8.4f) }
         compose.onNodeWithTag("time-value").assertTextEquals("12:10")
-        compose.onNodeWithTag("time-inc").performClick() // 12:15 > 12:12 → зажим
+        slider().performSemanticsAction(SemanticsActions.SetProgress) { it(12f) }
         compose.onNodeWithTag("time-value").assertTextEquals("12:12")
-        compose.onNodeWithTag("time-dec").performClick()
-        compose.onNodeWithTag("time-dec").performClick()
-        compose.onNodeWithTag("time-dec").performClick() // 12:12 → 12:07 → 12:02 → 12:00 (зажим)
-        compose.onNodeWithTag("time-value").assertTextEquals("12:00")
-        assertEquals(at(day, 12, 0), value)
+        assertEquals(at(day, 12, 12), value)
     }
 
-    @Test fun emptyRangeDoesNotCrashOnStep() {
+    @Test fun emptyRangeDisablesSlider() {
         val range = at(day, 12, 10)..at(day, 12, 5)
-        var value by mutableStateOf(at(day, 12, 7))
         compose.setContent {
-            TimeStepperField(value = value, range = range, stepMinutes = 5, onValueChange = { value = it }, zone = zone)
+            TimeSliderField(value = at(day, 12, 7), range = range, stepMinutes = 5, onValueChange = {}, zone = zone)
         }
         compose.onNodeWithTag("time-value").assertTextEquals("12:07")
-        compose.onNodeWithTag("time-inc").performClick()
-        compose.onNodeWithTag("time-value").assertTextEquals("12:07")
-        compose.onNodeWithTag("time-dec").performClick()
-        compose.onNodeWithTag("time-value").assertTextEquals("12:07")
+        slider().assertIsNotEnabled()
     }
+
+    private fun slider() = compose.onNodeWithTag("time-slider")
 }

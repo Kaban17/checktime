@@ -3,11 +3,8 @@ package dev.boar.checktime.ui.common
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -22,8 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.boar.checktime.R
 import dev.boar.checktime.domain.TimeMath
@@ -48,10 +43,23 @@ fun pickerToEpoch(current: Long, hour: Int, minute: Int, range: LongRange, zone:
     return sameDay
 }
 
-/** Время с кнопками ±[stepMinutes] и TimePicker по тапу; значение зажимается в [range] (включительно). */
+/**
+ * Значение со слайдера: прилипает к сетке [stepMinutes] по местным часам (12:05, 12:10…),
+ * края диапазона достижимы точно, даже если не лежат на сетке.
+ */
+fun snapTime(raw: Long, range: LongRange, stepMinutes: Int, zone: ZoneId): Long {
+    if (raw <= range.first) return range.first
+    if (raw >= range.last) return range.last
+    val step = stepMinutes * TimeMath.MINUTE_MS
+    val offset = zone.rules.getOffset(Instant.ofEpochMilli(raw)).totalSeconds * 1000L
+    val snapped = Math.floorDiv(raw + offset + step / 2, step) * step - offset
+    return snapped.coerceIn(range.first, range.last)
+}
+
+/** Время со слайдером по [range] (включительно, шаг [stepMinutes]) и TimePicker по тапу на значение. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TimeStepperField(
+fun TimeSliderField(
     value: Long,
     range: LongRange,
     stepMinutes: Int,
@@ -60,31 +68,32 @@ fun TimeStepperField(
     zone: ZoneId = ZoneId.systemDefault(),
 ) {
     var showPicker by remember { mutableStateOf(false) }
-    val step = stepMinutes * TimeMath.MINUTE_MS
     val inRange = value in range
     val empty = range.first > range.last
-    val minusLabel = stringResource(R.string.time_step_minus)
-    val plusLabel = stringResource(R.string.time_step_plus)
     val pickLabel = stringResource(R.string.time_pick)
+    // Слайдер работает в минутах от начала диапазона: epoch-мс во Float не помещаются без потери точности.
+    val spanMinutes = if (empty) 0f else ((range.last - range.first) / TimeMath.MINUTE_MS).toFloat()
 
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        RepeatButton(
-            onClick = { if (!empty) onValueChange((value - step).coerceIn(range.first, range.last)) },
-            modifier = Modifier.testTag("time-dec").semantics { contentDescription = minusLabel },
-        ) { Text("−", style = MaterialTheme.typography.titleLarge) }
         Text(
             formatTime(value, zone),
             modifier = Modifier
                 .clickable(onClickLabel = pickLabel) { showPicker = true }
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(end = 16.dp, top = 8.dp, bottom = 8.dp)
                 .testTag("time-value"),
             style = MaterialTheme.typography.headlineSmall,
             color = if (inRange) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
         )
-        RepeatButton(
-            onClick = { if (!empty) onValueChange((value + step).coerceIn(range.first, range.last)) },
-            modifier = Modifier.testTag("time-inc"),
-        ) { Icon(Icons.Default.Add, contentDescription = plusLabel) }
+        CompactSlider(
+            value = if (empty) 0f else ((value.coerceIn(range.first, range.last) - range.first).toFloat() / TimeMath.MINUTE_MS),
+            onValueChange = { minutes ->
+                val raw = if (minutes >= spanMinutes) range.last else range.first + (minutes * TimeMath.MINUTE_MS).toLong()
+                onValueChange(snapTime(raw, range, stepMinutes, zone))
+            },
+            valueRange = 0f..maxOf(spanMinutes, 1f),
+            enabled = !empty && spanMinutes > 0f,
+            modifier = Modifier.weight(1f).testTag("time-slider"),
+        )
     }
 
     if (showPicker) {

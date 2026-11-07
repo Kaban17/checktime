@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -37,7 +38,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.boar.checktime.R
 import dev.boar.checktime.domain.TimeMath
-import dev.boar.checktime.ui.common.TimeStepperField
+import dev.boar.checktime.ui.common.TimeSliderField
+import dev.boar.checktime.ui.common.edgeSafeInsets
 import dev.boar.checktime.ui.common.formatDurationMs
 import dev.boar.checktime.ui.common.formatTime
 import java.time.ZoneId
@@ -84,7 +86,7 @@ internal fun SegmentEditContent(
     var mode by remember { mutableStateOf<Mode>(Mode.Menu) }
     val s = state.segment
 
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
+    Column(Modifier.fillMaxWidth().windowInsetsPadding(edgeSafeInsets()).padding(bottom = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(14.dp).clip(CircleShape).background(Color(state.category?.color ?: 0xFF9E9E9E.toInt())))
             Spacer(Modifier.width(12.dp))
@@ -196,7 +198,7 @@ private fun TimeEditor(state: EditorState, kind: TimeKind, zone: ZoneId, onConfi
     var value by remember(kind) { mutableStateOf(initial) }
     Column {
         Text(stringResource(title), style = MaterialTheme.typography.labelLarge)
-        TimeStepperField(
+        TimeSliderField(
             value = value,
             range = range,
             stepMinutes = state.stepMinutes,

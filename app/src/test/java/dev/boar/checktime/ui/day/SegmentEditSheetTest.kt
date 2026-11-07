@@ -6,7 +6,9 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import dev.boar.checktime.data.Category
 import dev.boar.checktime.data.Group
 import dev.boar.checktime.data.GroupWithCategories
@@ -34,6 +36,11 @@ class SegmentEditSheetTest {
     private val cur = Segment(id = 11, startAt = 9 * h, endAt = 10 * h, categoryId = 2)
     private val next = Segment(id = 12, startAt = 10 * h, endAt = 11 * h, categoryId = 1)
 
+    /** Слайдер времени считает в минутах от начала допустимого диапазона. */
+    private fun slideTo(minutesFromStart: Float) {
+        compose.onNodeWithTag("time-slider").performSemanticsAction(SemanticsActions.SetProgress) { it(minutesFromStart) }
+    }
+
     private fun state(previous: Segment? = prev, nxt: Segment? = next) =
         EditorState(cur, previous, nxt, food, groups, stepMinutes = 5)
 
@@ -56,7 +63,8 @@ class SegmentEditSheetTest {
         compose.onNodeWithText("Разбить").performClick()
         compose.onNodeWithTag("time-value").assertExists()
         compose.onNodeWithText("09:30").assertExists()
-        compose.onNodeWithTag("time-inc").performClick()
+        slideTo(34f) // диапазон 09:01–09:59: 09:35
+        compose.onNodeWithText("09:35").assertExists()
         compose.onNodeWithTag("time-confirm").performClick()
         assertEquals(9 * h + 35 * MINUTE_MS, splitAt)
     }
@@ -68,7 +76,7 @@ class SegmentEditSheetTest {
         }
         compose.onNodeWithText("Сдвинуть конец").performClick()
         compose.onNodeWithText("10:00").assertExists()
-        compose.onNodeWithTag("time-dec").performClick()
+        slideTo(53.4f) // диапазон 09:01–10:59: 09:54:24 прилипает к 09:55
         compose.onNodeWithTag("time-confirm").performClick()
         assertEquals(10 * h - 5 * MINUTE_MS, moved)
     }
@@ -99,7 +107,7 @@ class SegmentEditSheetTest {
             SegmentEditContent(state(), onChangeCategory = {}, onSplit = {}, onMoveStart = {}, onMoveEnd = {}, onMergePrevious = {}, onMergeNext = {}, zone = zone)
         }
         compose.onNodeWithText("Сдвинуть начало").performClick()
-        repeat(20) { compose.onNodeWithTag("time-dec").performClick() }
+        slideTo(0f)
         compose.onNodeWithTag("time-value").assertTextEquals("08:01")
         compose.onNodeWithTag("time-confirm").assertIsEnabled()
     }
@@ -110,7 +118,7 @@ class SegmentEditSheetTest {
             SegmentEditContent(state(), onChangeCategory = {}, onSplit = { splitAt = it }, onMoveStart = {}, onMoveEnd = {}, onMergePrevious = {}, onMergeNext = {}, zone = zone)
         }
         compose.onNodeWithText("Разбить").performClick()
-        compose.onNodeWithTag("time-inc").performClick()
+        slideTo(10f)
         compose.onNodeWithTag("time-cancel").performClick()
         compose.onNodeWithText("Разбить").assertExists() // вернулись в меню
         assertEquals(-1L, splitAt)                       // ничего не подтвердили
