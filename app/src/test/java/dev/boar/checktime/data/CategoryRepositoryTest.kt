@@ -21,8 +21,9 @@ class CategoryRepositoryTest {
     @After fun tearDown() = db.close()
 
     @Test fun seedCreatesDefaultsOnce() = runTest {
-        repo.seedDefaultsIfEmpty()
-        repo.seedDefaultsIfEmpty()
+        val names = SeedNames("Личное", listOf("Сон", "Еда", "Спорт", "Отдых"), "Работа")
+        repo.seedDefaultsIfEmpty(names)
+        repo.seedDefaultsIfEmpty(names)
         val tree = repo.observeTree().first()
         assertEquals(listOf("Личное", "Работа"), tree.map { it.group.name })
         assertEquals(listOf("Сон", "Еда", "Спорт", "Отдых"), tree[0].categories.map { it.name })

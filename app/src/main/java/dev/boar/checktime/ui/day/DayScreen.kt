@@ -42,13 +42,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.boar.checktime.R
 import dev.boar.checktime.scheduler.PendingNotification
+import dev.boar.checktime.ui.common.datePattern
 import dev.boar.checktime.ui.common.formatDuration
 import dev.boar.checktime.ui.common.formatDurationMs
 import dev.boar.checktime.ui.common.formatTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
-private val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.forLanguageTag("ru"))
 
 @Composable
 fun DayRoute(viewModel: DayViewModel) {
@@ -101,7 +99,7 @@ fun DayScreen(
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onPrevious) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null) }
             Text(
-                state.date.format(dateFormatter).replaceFirstChar { it.uppercase() },
+                state.date.format(datePattern("EEEE, d MMMM", "EEEE, MMMM d")).replaceFirstChar { it.uppercase() },
                 Modifier.weight(1f),
                 style = MaterialTheme.typography.titleMedium,
             )

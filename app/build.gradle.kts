@@ -33,6 +33,11 @@ android {
         compose = true
     }
 
+    // Список языков для системного выбора языка приложения (Android 13+).
+    androidResources {
+        generateLocaleConfig = true
+    }
+
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }

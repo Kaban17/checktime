@@ -11,7 +11,12 @@ must be accounted for — there is one "unaccounted tail" `[accountedUntil, now)
 never gaps. The design spec lives in `docs/superpowers/specs/` and is the
 source of truth for behaviour; update it when behaviour changes.
 
-Communicate with the user in Russian. UI strings are Russian, in `strings.xml`.
+Communicate with the user in Russian. The UI is bilingual: English is the default in
+`res/values/strings.xml`, Russian in `res/values-ru/strings.xml` — every string goes into
+both. Durations (`formatDuration`) and date patterns (`datePattern`) in `ui/common/Format.kt`
+pick ru/en from `Locale.getDefault()`; default category names are seeded from resources
+once, on first launch. Robolectric tests run in Russian (`app/src/test/resources/robolectric.properties`);
+use `@Config(qualifiers = "en")` for English.
 
 ## Toolchain
 

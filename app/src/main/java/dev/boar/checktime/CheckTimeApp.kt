@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.room.Room
 import dev.boar.checktime.data.AppDatabase
 import dev.boar.checktime.data.CategoryRepository
+import dev.boar.checktime.data.SeedNames
 import dev.boar.checktime.data.SettingsRepository
 import dev.boar.checktime.data.settingsDataStore
 import dev.boar.checktime.domain.GoalRepository
@@ -41,7 +42,14 @@ open class CheckTimeApp : Application() {
         container = createContainer()
         PendingNotification.createChannels(this)
         container.applicationScope.launch {
-            container.categories.seedDefaultsIfEmpty()
+            container.categories.seedDefaultsIfEmpty(
+                SeedNames(
+                    personal = getString(R.string.seed_personal),
+                    personalCategories = listOf(R.string.seed_sleep, R.string.seed_food, R.string.seed_sport, R.string.seed_rest)
+                        .map(::getString),
+                    work = getString(R.string.seed_work),
+                ),
+            )
             container.timeline.coalesceAll()
         }
     }

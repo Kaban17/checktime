@@ -240,7 +240,11 @@ ui/          Compose-экраны + ViewModel'и, Compose Navigation
 - Kotlin 2.2, AGP 9.x, Gradle 9.6, Compose BOM 2026.09, Material 3, Room 2.8
   (KSP), DataStore Preferences, Compose Navigation.
 - `minSdk 26`, `targetSdk 36`. Сборка под JDK 21.
-- Язык интерфейса — русский, строки в `strings.xml`.
+- Интерфейс на английском (по умолчанию, `values/`) и русском (`values-ru/`);
+  язык берётся из системы, на Android 13+ его можно выбрать для приложения
+  отдельно (`generateLocaleConfig`). Единицы длительности и шаблоны дат
+  следуют тому же языку. Стартовые категории (§4.2) создаются на языке системы
+  при первом запуске и дальше не переводятся — это данные пользователя.
 
 ## 6. Граничные случаи
 

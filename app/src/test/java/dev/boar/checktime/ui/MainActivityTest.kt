@@ -15,6 +15,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
@@ -48,6 +49,14 @@ class MainActivityTest {
         waitForText("Целей на эту неделю нет")
         compose.onNodeWithTag("nav-day").performClick()
         waitForText("Учёт не начат — откройте «Настройки»")
+    }
+
+    @Test @Config(qualifiers = "en")
+    fun englishSystemGetsEnglishUi() {
+        waitForText("Tracking hasn't started — open Settings")
+        compose.onNodeWithText("Goals").assertIsDisplayed()
+        compose.onNodeWithTag("nav-settings").performClick()
+        waitForText("Start tracking")
     }
 
     @Test fun resumeWithoutTailClearsNotification() {

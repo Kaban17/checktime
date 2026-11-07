@@ -5,6 +5,9 @@ import kotlinx.coroutines.flow.combine
 
 data class GroupWithCategories(val group: Group, val categories: List<Category>)
 
+/** Названия стартового набора: группа «Личное» с категориями и группа «Работа» с одноимённой категорией. */
+data class SeedNames(val personal: String, val personalCategories: List<String>, val work: String)
+
 class CategoryRepository(private val dao: CategoryDao) {
 
     fun observeTree(): Flow<List<GroupWithCategories>> =
@@ -12,15 +15,18 @@ class CategoryRepository(private val dao: CategoryDao) {
             groups.map { g -> GroupWithCategories(g, categories.filter { it.groupId == g.id }) }
         }
 
-    /** Стартовый набор из спеки (п. 4.2). Строки не в ресурсах — репозиторию контекст не нужен. */
-    suspend fun seedDefaultsIfEmpty() {
+    /**
+     * Стартовый набор из спеки (п. 4.2). Названия приходят из ресурсов на языке системы
+     * в момент первого запуска; потом это обычные данные пользователя и не переводятся.
+     */
+    suspend fun seedDefaultsIfEmpty(names: SeedNames) {
         if (dao.groupCount() > 0) return
-        val personal = addGroup("Личное", Palette.colors[3])
-        listOf("Сон", "Еда", "Спорт", "Отдых").forEachIndexed { i, name ->
+        val personal = addGroup(names.personal, Palette.colors[3])
+        names.personalCategories.forEachIndexed { i, name ->
             addCategory(personal, name, Palette.colors[(i + 4) % Palette.colors.size])
         }
-        val work = addGroup("Работа", Palette.colors[5])
-        addCategory(work, "Работа", Palette.colors[5])
+        val work = addGroup(names.work, Palette.colors[5])
+        addCategory(work, names.work, Palette.colors[5])
     }
 
     suspend fun addGroup(name: String, color: Int): Long =

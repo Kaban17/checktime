@@ -47,16 +47,13 @@ import dev.boar.checktime.domain.PeriodKind
 import dev.boar.checktime.domain.StatsPeriod
 import dev.boar.checktime.domain.firstDate
 import dev.boar.checktime.domain.lastDate
+import dev.boar.checktime.ui.common.datePattern
 import dev.boar.checktime.ui.common.formatDurationMs
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlin.math.roundToInt
 
-private val dayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.forLanguageTag("ru"))
-private val shortFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM", Locale.forLanguageTag("ru"))
 
 @Composable
 fun StatsRoute(viewModel: StatsViewModel) {
@@ -222,8 +219,11 @@ private fun PeriodHeader(state: StatsUiState, onPrevious: () -> Unit, onNext: ()
 }
 
 internal fun periodTitle(period: StatsPeriod): String = when (period) {
-    is StatsPeriod.Day -> period.date.format(dayFormatter)
-    else -> "${period.firstDate().format(shortFormatter)} – ${period.lastDate().format(shortFormatter)}"
+    is StatsPeriod.Day -> period.date.format(datePattern("d MMMM yyyy", "MMMM d, yyyy"))
+    else -> {
+        val short = datePattern("d MMM", "MMM d")
+        "${period.firstDate().format(short)} – ${period.lastDate().format(short)}"
+    }
 }
 
 private fun percent(share: Float): String = "${(share * 100).roundToInt()}%"
