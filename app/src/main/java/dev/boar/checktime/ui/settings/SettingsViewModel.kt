@@ -9,6 +9,8 @@ import dev.boar.checktime.AppContainer
 import dev.boar.checktime.data.Settings
 import dev.boar.checktime.data.TrackingState
 import dev.boar.checktime.domain.TimeMath
+import dev.boar.checktime.domain.exportAllCsv
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,10 +18,18 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.IOException
+import java.io.OutputStream
+import java.time.Instant
+import java.time.ZoneId
 
 data class SettingsUiState(val settings: Settings, val tracking: TrackingState?)
 
-class SettingsViewModel(private val container: AppContainer) : ViewModel() {
+class SettingsViewModel(
+    private val container: AppContainer,
+    private val zone: ZoneId = ZoneId.systemDefault(),
+) : ViewModel() {
     val state: StateFlow<SettingsUiState?> =
         combine(container.settings.settings, container.timeline.observeTrackingState()) { s, t -> SettingsUiState(s, t) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
@@ -37,6 +47,25 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     fun startTracking(): Job = viewModelScope.launch {
         container.timeline.startTracking(container.now())
         rearm()
+    }
+
+    /** Имя файла по умолчанию для экспорта: checktime-2026-11-07.csv. */
+    fun exportFileName(): String = "checktime-${Instant.ofEpochMilli(container.now()).atZone(zone).toLocalDate()}.csv"
+
+    /** Пишет все записи в CSV; [open] даёт поток (null — не открылся). Результат — число записей или null при ошибке. */
+    fun exportCsv(open: () -> OutputStream?, onResult: (Int?) -> Unit): Job = viewModelScope.launch {
+        val count = try {
+            val (csv, count) = exportAllCsv(container.db, zone)
+            withContext(Dispatchers.IO) {
+                (open() ?: throw IOException("no stream")).use { it.write(csv.toByteArray(Charsets.UTF_8)) }
+            }
+            count
+        } catch (e: IOException) {
+            null
+        } catch (e: SecurityException) {
+            null // провайдер документа отозвал доступ
+        }
+        onResult(count)
     }
 
     /** Будильник = accountedUntil + текущий интервал; без начатого учёта будильника нет. */

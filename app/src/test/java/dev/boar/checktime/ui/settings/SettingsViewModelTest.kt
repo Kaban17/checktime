@@ -5,6 +5,7 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import dev.boar.checktime.AppContainer
 import dev.boar.checktime.MainDispatcherRule
+import dev.boar.checktime.data.Segment
 import dev.boar.checktime.domain.TimeMath.MINUTE_MS
 import dev.boar.checktime.testContainer
 import kotlinx.coroutines.flow.first
@@ -18,6 +19,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import java.io.ByteArrayOutputStream
+import java.time.ZoneId
 
 @RunWith(RobolectricTestRunner::class)
 class SettingsViewModelTest {
@@ -69,4 +72,27 @@ class SettingsViewModelTest {
         vm.setInterval(15).join()
         assertEquals(now + MINUTE_MS, shadowOf(alarmManager).peekNextScheduledAlarm()!!.triggerAtTime)
     }
+
+    @Test fun exportWritesAllSegmentsAsCsv() = runTest {
+        val group = container.categories.addGroup("Личное", 1)
+        val sleep = container.categories.addCategory(group, "Сон", 2)
+        container.db.segmentDao().insertAll(
+            listOf(Segment(startAt = 0, endAt = 30 * MINUTE_MS, categoryId = sleep), Segment(startAt = 30 * MINUTE_MS, endAt = 45 * MINUTE_MS, categoryId = sleep)),
+        )
+        val out = ByteArrayOutputStream()
+        var result: Int? = -1
+        SettingsViewModel(container, ZoneId.of("UTC")).exportCsv({ out }) { result = it }.join()
+        assertEquals(2, result)
+        val lines = out.toString(Charsets.UTF_8).removePrefix("\uFEFF").trimEnd().split("\r\n")
+        assertEquals(listOf("date,start,end,minutes,group,category", "1970-01-01,00:00,00:30,30,Личное,Сон", "1970-01-01,00:30,00:45,15,Личное,Сон"), lines)
+    }
+
+    @Test fun exportReportsFailureWhenStreamDoesNotOpen() = runTest {
+        var result: Int? = -1
+        vm.exportCsv({ null }) { result = it }.join()
+        assertNull(result)
+    }
+
+    @Test fun exportFileNameUsesToday() =
+        assertEquals("checktime-1970-01-01.csv", SettingsViewModel(container, ZoneId.of("UTC")).exportFileName())
 }

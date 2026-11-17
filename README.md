@@ -22,7 +22,7 @@ The UI is available in English and Russian and follows the system language
 - **Goals**: a weekly minimum for a group or a category, with a progress bar.
   A goal stays in effect until you change it; past weeks keep the goals they had.
 - **Settings**: interval, postpone time, slider step, the group and category
-  editor, and a permissions checklist.
+  editor, CSV export of all records, and a permissions checklist.
 
 The popup never wakes the screen. The alarm posts an "Unlogged: X min"
 notification, and the screen opens after you unlock the phone.

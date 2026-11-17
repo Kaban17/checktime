@@ -91,4 +91,7 @@
     <string name="seed_sport">Sport</string>
     <string name="seed_rest">Rest</string>
     <string name="seed_work">Work</string>
+    <string name="settings_export">Export to CSV</string>
+    <string name="export_done">Records exported: %1$d</string>
+    <string name="export_failed">Couldn\'t write the file</string>
 </resources>

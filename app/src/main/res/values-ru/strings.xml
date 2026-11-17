@@ -90,4 +90,7 @@
     <string name="seed_sport">Спорт</string>
     <string name="seed_rest">Отдых</string>
     <string name="seed_work">Работа</string>
+    <string name="settings_export">Экспорт в CSV</string>
+    <string name="export_done">Экспортировано записей: %1$d</string>
+    <string name="export_failed">Не удалось записать файл</string>
 </resources>

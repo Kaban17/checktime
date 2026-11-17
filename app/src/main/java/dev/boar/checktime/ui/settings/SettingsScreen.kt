@@ -2,6 +2,7 @@ package dev.boar.checktime.ui.settings
 
 import android.Manifest
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -58,6 +60,17 @@ fun SettingsRoute(viewModel: SettingsViewModel, onOpenCategories: () -> Unit) {
         permissions = Permissions.status(context)
         onPauseOrDispose { }
     }
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        viewModel.exportCsv({ context.contentResolver.openOutputStream(uri, "wt") }) { count ->
+            val text = if (count != null) {
+                context.getString(R.string.export_done, count)
+            } else {
+                context.getString(R.string.export_failed)
+            }
+            Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+        }
+    }
     val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         permissions = Permissions.status(context)
     }
@@ -71,6 +84,7 @@ fun SettingsRoute(viewModel: SettingsViewModel, onOpenCategories: () -> Unit) {
         onStartTracking = { viewModel.startTracking() },
         onAllocateNow = { context.startActivity(PendingNotification.allocationIntent(context)) },
         onOpenCategories = onOpenCategories,
+        onExport = { exportLauncher.launch(viewModel.exportFileName()) },
         onFixOverlay = { context.startActivity(Permissions.overlaySettingsIntent(context)) },
         onFixNotifications = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -94,6 +108,7 @@ fun SettingsScreen(
     onStartTracking: () -> Unit,
     onAllocateNow: () -> Unit,
     onOpenCategories: () -> Unit,
+    onExport: () -> Unit,
     onFixOverlay: () -> Unit,
     onFixNotifications: () -> Unit,
     onFixExactAlarms: () -> Unit,
@@ -128,6 +143,9 @@ fun SettingsScreen(
         HorizontalDivider()
         OutlinedButton(onClick = onOpenCategories, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.settings_categories))
+        }
+        OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth().testTag("export-csv")) {
+            Text(stringResource(R.string.settings_export))
         }
 
         HorizontalDivider()
